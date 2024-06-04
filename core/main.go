@@ -3,32 +3,35 @@ package main
 import (
 	"Raphael/core/Handler"
 	"fmt"
-	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		slog.Error("Error loading .env file")
 	}
 
 	client, err := discordgo.New("Bot " + os.Getenv("DISOCRD_TOKEN"))
 	if err != nil {
-		log.Fatal("Error creating Discord session", err)
+		slog.Error("Error creating Discord session", err)
 		return
 	}
 
 	client.AddHandler(Handler.MessageCreate)
+	loadInteractionCommand(client)
+	client.AddHandler(Handler.InteractionCreate)
 	client.Identify.Intents = discordgo.IntentGuildMessages
 
 	err = client.Open()
 	if err != nil {
-		log.Fatal("Error opening connection", err)
+		slog.Error("Error opening connection", err)
 		return
 	}
 
