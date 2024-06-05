@@ -1,6 +1,9 @@
 package main
 
 import (
+	"log/slog"
+
+	//    "log/slog"
 	"os"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,9 +17,10 @@ func loadInteractionCommand(s *discordgo.Session) {
 			Description: "Replies with Pong!",
 		},
 	}
+
 	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, os.Getenv("GUILD_ID"), commands)
 
 	if err != nil {
-		// Handle the error
+		slog.Error("Error creating interaction command: ", err)
 	}
 }

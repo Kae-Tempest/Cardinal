@@ -1,25 +1,19 @@
-package Handler
+package handler
 
-import "github.com/bwmarrin/discordgo"
+import (
+	//    "Raphael/core/database"
+	"Raphael/core/commands"
+	"github.com/bwmarrin/discordgo"
+)
 
 func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member.User.Bot {
 		return
 	}
-
+	//	db := database.Connect()
 	data := i.ApplicationCommandData()
 	switch data.Name {
 	case "ping":
-		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Pong! 🏓",
-			},
-		})
-
-		if err != nil {
-			s.ChannelMessageSend(i.ChannelID, "An error occurred while executing this command.")
-		}
+		commands.Ping(s, i)
 	}
-
 }

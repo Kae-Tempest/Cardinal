@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Raphael/core/Handler"
+	"Raphael/core/handler"
 	"fmt"
 	"log/slog"
 	"os"
@@ -18,22 +18,22 @@ func main() {
 		slog.Error("Error loading .env file")
 	}
 
-	client, err := discordgo.New("Bot " + os.Getenv("DISOCRD_TOKEN"))
+	client, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
 		slog.Error("Error creating Discord session", err)
 		return
 	}
-
-	client.AddHandler(Handler.MessageCreate)
-	loadInteractionCommand(client)
-	client.AddHandler(Handler.InteractionCreate)
-	client.Identify.Intents = discordgo.IntentGuildMessages
 
 	err = client.Open()
 	if err != nil {
 		slog.Error("Error opening connection", err)
 		return
 	}
+
+	client.AddHandler(handler.MessageCreate)
+	loadInteractionCommand(client)
+	client.AddHandler(handler.InteractionCreate)
+	client.Identify.Intents = discordgo.IntentGuildMessages
 
 	fmt.Println("Raphael is now running. Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
