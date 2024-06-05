@@ -14,7 +14,7 @@ func loadInteractionCommand(s *discordgo.Session) {
 			Description: "Replies with Pong!",
 		},
 	}
-	_, err := s.ApplicationCommandBulkOverwrite(os.Getenv("APP_ID"), os.Getenv("GUILD_ID"), commands)
+	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, os.Getenv("GUILD_ID"), commands)
 
 	if err != nil {
 		// Handle the error
