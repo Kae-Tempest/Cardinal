@@ -3,3 +3,4 @@ data
 docker
 server
 web
+core/.env
