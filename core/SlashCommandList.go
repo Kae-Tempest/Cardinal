@@ -1,26 +1,47 @@
 package main
 
 import (
-	"log/slog"
-
-	//    "log/slog"
-	"os"
-
 	"github.com/bwmarrin/discordgo"
+	"log/slog"
+	"os"
 )
 
 func loadInteractionCommand(s *discordgo.Session) {
-
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "ping",
 			Description: "Replies with Pong!",
 		},
+		{
+			Name:        "setup",
+			Description: "Character Creation",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "username",
+					Description: "Choose your Username",
+					Required:    true,
+				},
+				{
+					Type:         discordgo.ApplicationCommandOptionString,
+					Name:         "race",
+					Description:  "Choose your Race",
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Type:         discordgo.ApplicationCommandOptionString,
+					Name:         "job",
+					Description:  "Choose your Job",
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
 	}
+	_, applicationCommandErr := s.ApplicationCommandBulkOverwrite(s.State.User.ID, os.Getenv("GUILD_ID"), commands)
 
-	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, os.Getenv("GUILD_ID"), commands)
-
-	if err != nil {
-		slog.Error("Error creating interaction command: ", err)
+	if applicationCommandErr != nil {
+		slog.Error("Error creating interaction command: ", applicationCommandErr)
 	}
 }

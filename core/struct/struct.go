@@ -1,16 +1,16 @@
-package main
+package _struct
 
-type player struct {
-	ID       int   `json:"id"`
+type Player struct {
+	ID       int    `json:"id"`
 	Name     string `json:"name"`
 	ServerID string `json:"server_id"`
 	Username string `json:"username"`
-	RaceID   int `json:"race_id"` 
-	JobID    int `json:"job_id"`
-	Exp      int  `json:"exp"`
-	Po       int `json:"po"`
-	Level    int  `json:"level"`
-	GuildID  int `json:"guild_id"` // 0 = no guild
+	RaceID   int    `json:"race_id"`
+	JobID    int    `json:"job_id"`
+	Exp      int    `json:"exp"`
+	Po       int    `json:"po"`
+	Level    int    `json:"level"`
+	GuildID  int    `json:"guild_id"` // 0 = no guild
 }
 
 type Inventory struct {
@@ -23,6 +23,12 @@ type Job struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"` // Description of the job
+}
+
+type Race struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"` // Description of the Race
 }
 
 type Items struct {
