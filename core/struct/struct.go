@@ -38,11 +38,11 @@ type Items struct {
 	Type        int    `json:"type"` // 0 = Equipable, 1 = Consomable, 2 = Quest
 }
 
-const (
-	Equipable  int = 0
-	Consomable int = 1
-	Quest      int = 2
-)
+//const (
+//	Equipable  int = 0
+//	Consomable int = 1
+//	Quest      int = 2
+//)
 
 type Guild struct {
 	ID      int    `json:"id"`
@@ -73,6 +73,7 @@ type Summon_Beast struct {
 	Stamina      int    `json:"stamina"`
 	Dexterity    int    `json:"dexterity"`
 	Intelligence int    `json:"intelligence"`
+	Wisdom       int    `json:"wisdom"`
 	Charisma     int    `json:"charisma"`
 }
 type Stats struct {
@@ -88,7 +89,7 @@ type Stats struct {
 type Pets struct {
 	CreatureID  int  `json:"creature_id"`
 	IsMoumtable bool `json:"is_mountable"`
-	speed       int  `json:"speed"` // 0 = slow, 1 = normal, 2 = fast
+	Speed       int  `json:"speed"` // 0 = slow, 1 = normal, 2 = fast
 }
 type Effects struct {
 	ReferenceID  int `json:"reference_id"` // Item ID or Skill ID or pet ID or creature ID
@@ -98,8 +99,9 @@ type Effects struct {
 	Stamina      int `json:"stamina"`
 	Dexterity    int `json:"dexterity"`
 	Intelligence int `json:"intelligence"`
+	Wisdom       int `json:"wisdom"`
 	Charisma     int `json:"charisma"`
-	use          int `json:"use"` // 0 = item, 1 = skill, 2 = pet, 3 = creature
+	Use          int `json:"use"` // 0 = item, 1 = skill, 2 = pet, 3 = creature
 }
 type Equipment struct {
 	UserID      int `json:"user_id"`
@@ -117,8 +119,8 @@ type Equipment struct {
 
 type Creature struct {
 	ID           int    `json:"id"`
-	name         string `json:"name"`
-	isPet        bool   `json:"is_pet"`
+	Mame         string `json:"name"`
+	IsPet        bool   `json:"is_pet"`
 	Strength     int    `json:"strength"`
 	Constitution int    `json:"constitution"`
 	Mana         int    `json:"mana"`
@@ -126,6 +128,7 @@ type Creature struct {
 	Dexterity    int    `json:"dexterity"`
 	Intelligence int    `json:"intelligence"`
 	Charisma     int    `json:"charisma"`
+	Wisdom       int    `json:"wisdom"`
 }
 type Quests struct {
 	ID          int         `json:"id"`
