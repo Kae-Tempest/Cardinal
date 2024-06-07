@@ -1,16 +1,17 @@
 package _struct
 
 type Player struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	ServerID string `json:"server_id"`
-	Username string `json:"username"`
-	RaceID   int    `json:"race_id"`
-	JobID    int    `json:"job_id"`
-	Exp      int    `json:"exp"`
-	Po       int    `json:"po"`
-	Level    int    `json:"level"`
-	GuildID  int    `json:"guild_id"` // 0 = no guild
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	ServerID      string `json:"server_id"`
+	Username      string `json:"username"`
+	RaceID        int    `json:"race_id"`
+	JobID         int    `json:"job_id"`
+	Exp           int    `json:"exp"`
+	Po            int    `json:"po"`
+	Level         int    `json:"level"`
+	GuildID       int    `json:"guild_id"` // 0 = no guild
+	InventorySize int    `json:"inventorySize"`
 }
 
 type Inventory struct {
@@ -22,27 +23,30 @@ type Inventory struct {
 type Job struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
-	Description string `json:"description"` // Description of the job
+	Description string `json:"description"` // description of the job
 }
 
 type Race struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
-	Description string `json:"description"` // Description of the Race
+	Description string `json:"description"` // description of the race
 }
 
 type Items struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Type        int    `json:"type"` // 0 = Equipable, 1 = Consomable, 2 = Quest
+	ID               int    `json:"id"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	Type             int    `json:"type"` // 0 = Equipable, 1 = Consomable, 2 = Quest
+	Strength         int    `json:"strength"`
+	Constitution     int    `json:"constitution"`
+	Mana             int    `json:"mana"`
+	Stamina          int    `json:"stamina"`
+	Dexterity        int    `json:"dexterity"`
+	Intelligence     int    `json:"intelligence"`
+	Wisdom           int    `json:"wisdom"`
+	Charisma         int    `json:"charisma"`
+	EnchantmentLevel int    `json:"enchantmentLevel"`
 }
-
-//const (
-//	Equipable  int = 0
-//	Consomable int = 1
-//	Quest      int = 2
-//)
 
 type Guild struct {
 	ID      int    `json:"id"`
@@ -51,19 +55,33 @@ type Guild struct {
 	Owner   string `json:"owner"`
 }
 
-type Skill struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	JobID       int    `json:"job_id"`
-	AccessAll   bool   `json:"access_all"` // If true, all jobs can use this skill
-	Description string `json:"description"`
+type GuildMembers struct {
+	ID      int `json:"id"`
+	GuildId int `json:"guildId"`
+	UserID  int `json:"userID"`
 }
 
-type User_Pet struct {
+type Skill struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	JobID        int    `json:"job_id"`
+	AccessAll    bool   `json:"access_all"` // If true, all jobs can use this skill
+	Description  string `json:"description"`
+	Strength     int    `json:"strength"`
+	Constitution int    `json:"constitution"`
+	Mana         int    `json:"mana"`
+	Stamina      int    `json:"stamina"`
+	Dexterity    int    `json:"dexterity"`
+	Intelligence int    `json:"intelligence"`
+	Wisdom       int    `json:"wisdom"`
+	Charisma     int    `json:"charisma"`
+}
+
+type UserPet struct {
 	PetID  int `json:"pet_id"`
 	UserID int `json:"user_id"`
 }
-type Summon_Beast struct {
+type SummonBeast struct {
 	ID           int    `json:"id"`
 	UserID       int    `json:"user_id"`
 	Name         string `json:"name"`
@@ -86,22 +104,11 @@ type Stats struct {
 	Intelligence int `json:"intelligence"`
 	Charisma     int `json:"charisma"`
 }
-type Pets struct {
+type PetsMounts struct {
+	ID          int  `json:"id"`
 	CreatureID  int  `json:"creature_id"`
 	IsMoumtable bool `json:"is_mountable"`
 	Speed       int  `json:"speed"` // 0 = slow, 1 = normal, 2 = fast
-}
-type Effects struct {
-	ReferenceID  int `json:"reference_id"` // Item ID or Skill ID or pet ID or creature ID
-	Strength     int `json:"strength"`
-	Constitution int `json:"constitution"`
-	Mana         int `json:"mana"`
-	Stamina      int `json:"stamina"`
-	Dexterity    int `json:"dexterity"`
-	Intelligence int `json:"intelligence"`
-	Wisdom       int `json:"wisdom"`
-	Charisma     int `json:"charisma"`
-	Use          int `json:"use"` // 0 = item, 1 = skill, 2 = pet, 3 = creature
 }
 type Equipment struct {
 	UserID      int `json:"user_id"`
@@ -117,7 +124,7 @@ type Equipment struct {
 	Accesorry_3 int `json:"accesorry_3"`
 }
 
-type Creature struct {
+type Creatures struct {
 	ID           int    `json:"id"`
 	Mame         string `json:"name"`
 	IsPet        bool   `json:"is_pet"`
@@ -131,23 +138,44 @@ type Creature struct {
 	Wisdom       int    `json:"wisdom"`
 }
 type Quests struct {
-	ID          int         `json:"id"`
-	Title       string      `json:"title"`
-	Description string      `json:"description"`
-	IsGroup     bool        `json:"is_group"`
-	Difficulty  int         `json:"difficulty"`
-	Data        []Objective `json:"data"`
-	Reward      Reward      `json:"reward"`
+	ID          int          `json:"id"`
+	Title       string       `json:"title"`
+	Description string       `json:"description"`
+	IsGroup     bool         `json:"is_group"`
+	Difficulty  int          `json:"difficulty"`
+	Data        []Objectives `json:"data"`
+	Reward      Rewards      `json:"reward"`
 }
 
-type Reward struct {
+type Rewards struct {
 	Exp  int   `json:"exp"`
 	Po   int   `json:"po"`
 	Item []int `json:"item"`
 }
 
-type Objective struct {
+type Objectives struct {
 	Title        string `json:"title"`         // {"objectif": "tuer 10 monstres"}
 	Objective    int    `json:"objective"`     // {"track": 0}
 	MaxObjective int    `json:"max_objective"` // {"max_track": 10}
+}
+
+type Cities struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Type int    `json:"type"`
+	Size int    `json:"size"`
+}
+
+type Emplacements struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Type       int    `json:"type"` // 0 = Ressource 1 = Mobs
+	IsSafety   bool   `json:"isSafety"`
+	Difficulty int    `json:"difficulty"`
+}
+
+type ResourcesEmplacements struct {
+	ID             int `json:"id"`
+	Name           int `json:"name"`
+	EmplacementsId int `json:"emplacementsId"`
 }
