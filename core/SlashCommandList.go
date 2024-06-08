@@ -38,6 +38,19 @@ func loadInteractionCommand(s *discordgo.Session) {
 				},
 			},
 		},
+		{
+			Name:        "move",
+			Description: "Move to one place",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:         discordgo.ApplicationCommandOptionString,
+					Name:         "location",
+					Description:  "Location where do you want to go",
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
 	}
 	_, applicationCommandErr := s.ApplicationCommandBulkOverwrite(s.State.User.ID, os.Getenv("GUILD_ID"), commands)
 

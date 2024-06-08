@@ -1,5 +1,7 @@
 package _struct
 
+import "time"
+
 type Player struct {
 	ID            int    `json:"id"`
 	Name          string `json:"name"`
@@ -118,10 +120,10 @@ type Equipment struct {
 	Boots       int `json:"boots"`
 	MainHand    int `json:"main_hand"`
 	OffHand     int `json:"off_hand"`
-	Accesorry_0 int `json:"accesorry_0"`
-	Accesorry_1 int `json:"accesorry_1"`
-	Accesorry_2 int `json:"accesorry_2"`
-	Accesorry_3 int `json:"accesorry_3"`
+	Accessorry0 int `json:"accessorry_0"`
+	Accessorry1 int `json:"accessorry_1"`
+	Accessorry2 int `json:"accessorry_2"`
+	Accessorry3 int `json:"accessorry_3"`
 }
 
 type Creatures struct {
@@ -159,23 +161,23 @@ type Objectives struct {
 	MaxObjective int    `json:"max_objective"` // {"max_track": 10}
 }
 
-type Cities struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-	Type int    `json:"type"`
-	Size int    `json:"size"`
-}
-
-type Emplacements struct {
+type Locations struct {
 	ID         int    `json:"id"`
 	Name       string `json:"name"`
-	Type       int    `json:"type"` // 0 = Ressource 1 = Mobs
+	Type       int    `json:"type"` // 0 = Resource, 1 = Mobs, 2 = City
 	IsSafety   bool   `json:"isSafety"`
 	Difficulty int    `json:"difficulty"`
+	Size       int    `json:"size"`
 }
 
 type ResourcesEmplacements struct {
 	ID             int `json:"id"`
 	Name           int `json:"name"`
 	EmplacementsId int `json:"emplacementsId"`
+}
+
+type PlayerAction struct {
+	UserId    int       `json:"user_id"`
+	Action    string    `json:"action"`
+	CreatedAt time.Time `json:"created_at"`
 }

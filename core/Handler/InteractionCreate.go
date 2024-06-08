@@ -17,6 +17,7 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		commands.Ping(s, i)
 	case "setup":
 		commands.Setup(s, i, db)
-
+	case "move":
+		commands.Move(s, i, db)
 	}
 }
