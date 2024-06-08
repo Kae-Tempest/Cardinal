@@ -21,12 +21,8 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 
 		var player = _struct.Player{}
 
-		raceID, raceErr := strconv.Atoi(data.Options[1].StringValue())
-		jobID, jobErr := strconv.Atoi(data.Options[2].StringValue())
-
-		if jobErr != nil || raceErr != nil {
-			slog.Error("Error during parsing string to int", jobErr, raceErr)
-		}
+		raceID, _ := strconv.Atoi(data.Options[1].StringValue())
+		jobID, _ := strconv.Atoi(data.Options[2].StringValue())
 
 		player.Name = i.Interaction.Member.User.GlobalName
 		player.ServerID = i.GuildID
@@ -37,6 +33,7 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 		player.Po = 50
 		player.Level = 1
 		player.GuildID = 0
+		player.InventorySize = 10
 
 		parsePlayer, _ := json.Marshal(player)
 
@@ -48,7 +45,16 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 		})
 		if err != nil {
 			slog.Error("Error during Interaction Response", err)
+			return
 		}
+
+		_, insertErr := db.Exec(ctx, `INSERT into public.players (name, server_id, username, race_id, job_id, exp, po , level, guild_id, inventory_size) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )`,
+			player.Name, player.ServerID, player.Username, player.RaceID, player.JobID, player.Exp, player.Po, player.Level, player.GuildID, player.InventorySize)
+		if insertErr != nil {
+			slog.Error("Error during insert from database", insertErr)
+			return
+		}
+
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
 		var choices []*discordgo.ApplicationCommandOptionChoice
@@ -92,6 +98,7 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 		})
 		if err != nil {
 			slog.Error("Error during AutoComplete Interaction Response", err)
+			return
 		}
 	}
 }
