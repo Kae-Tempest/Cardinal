@@ -51,6 +51,26 @@ func loadInteractionCommand(s *discordgo.Session) {
 				},
 			},
 		},
+		{
+			Name:        "harvest",
+			Description: "Harvest resources",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:         discordgo.ApplicationCommandOptionString,
+					Description:  "Choose type of Resource",
+					Name:         "type",
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Type:         discordgo.ApplicationCommandOptionString,
+					Description:  "Choose duration",
+					Name:         "time",
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
 	}
 	_, applicationCommandErr := s.ApplicationCommandBulkOverwrite(s.State.User.ID, os.Getenv("GUILD_ID"), commands)
 

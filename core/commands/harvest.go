@@ -9,17 +9,16 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
-	"strconv"
 	"time"
 )
 
-func Move(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
+func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
 	ctx := context.Background()
 
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
-
+		fmt.Println(data)
 		var player _struct.Player
 		selectErr := pgxscan.Select(ctx, db, &player, `SELECT * from players`)
 		if selectErr != nil {
@@ -28,44 +27,68 @@ func Move(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool
 		}
 		utils.CheckLastActionFinish(player, db)
 
-		locationID, _ := strconv.Atoi(data.Options[0].StringValue())
-		location := data.Options[0]
+		// create action
+		duration := time.Duration(data.Options[1].IntValue())
+		endAt := time.Now().Add(time.Second * duration)
+		utils.AddAction(player.ID, "harvest | duration:"+data.Options[1].StringValue(), db, endAt)
+
 		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("%s moved to %s", player, location.Name),
+				Content: fmt.Sprintf("%s", player),
 			},
 		})
-
-		// update player location
-		_, updateErr := db.Exec(ctx, `UPDATE players SET location_id = $1 where players.id = $2`,
-			locationID, player.ID)
-		if updateErr != nil {
-			slog.Error("Error during update from database", updateErr)
-			return
-		}
-		// insert player action
-		utils.AddAction(player.ID, "move", db, time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
 		var choices []*discordgo.ApplicationCommandOptionChoice
 		switch {
 		case data.Options[0].Focused:
-			var locations []_struct.Locations
-			selectErr := pgxscan.Select(ctx, db, &locations, `SELECT name, id FROM locations`)
+			var resourcesTypes []_struct.ResourcesType
+			selectErr := pgxscan.Select(ctx, db, &resourcesTypes, `SELECT * FROM resources_types`)
+			if selectErr != nil {
+				slog.Error("Error during select from database", selectErr)
+				return
+			}
+			for _, resourceType := range resourcesTypes {
+				choice := discordgo.ApplicationCommandOptionChoice{
+					Name:  resourceType.Name,
+					Value: resourceType.ID,
+				}
+				choices = append(choices, &choice)
+			}
+
+		case data.Options[1].Focused:
+			var resources []_struct.Resources
+			selectErr := pgxscan.Select(ctx, db, &resources, `SELECT name, id FROM resources`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)
 				return
 			}
 
-			for _, location := range locations {
-				choice := discordgo.ApplicationCommandOptionChoice{
-					Name:  location.Name,
-					Value: location.ID,
-				}
-				choices = append(choices, &choice)
+			timeChoices := []*discordgo.ApplicationCommandOptionChoice{
+				{
+					Name:  "30min",
+					Value: 1800,
+				},
+				{
+					Name:  "1h",
+					Value: 3600,
+				},
+				{
+					Name:  "1h30",
+					Value: 5400,
+				},
+				{
+					Name:  "2h",
+					Value: 7200,
+				},
 			}
+
+			for _, choice := range timeChoices {
+				choices = append(choices, choice)
+			}
+
 		}
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionApplicationCommandAutocompleteResult,

@@ -38,7 +38,7 @@ type Items struct {
 	ID               int    `json:"id"`
 	Name             string `json:"name"`
 	Description      string `json:"description"`
-	Type             int    `json:"type"` // 0 = Equipable, 1 = Consomable, 2 = Quest
+	Type             int    `json:"type"` // 0 = Equipable, 1 = Consomable, 2 = Quest, 3 = Resources
 	Strength         int    `json:"strength"`
 	Constitution     int    `json:"constitution"`
 	Mana             int    `json:"mana"`
@@ -170,14 +170,22 @@ type Locations struct {
 	Size       int    `json:"size"`
 }
 
-type ResourcesEmplacements struct {
-	ID             int `json:"id"`
-	Name           int `json:"name"`
-	EmplacementsId int `json:"emplacementsId"`
+type Resources struct {
+	ID               int    `json:"id"`
+	Name             string `json:"name"`
+	EmplacementsId   int    `json:"emplacementsId"`
+	ResourcesTypeId  int    `json:"resourcesTypeId"`
+	QuantitiesPerMin int    `json:"quantitiesPerMin"`
+}
+
+type ResourcesType struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type PlayerAction struct {
 	UserId    int       `json:"user_id"`
 	Action    string    `json:"action"`
 	CreatedAt time.Time `json:"created_at"`
+	EndAt     time.Time `json:"end_at"`
 }
