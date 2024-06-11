@@ -14,6 +14,7 @@ type Player struct {
 	Level         int    `json:"level"`
 	GuildID       int    `json:"guild_id"` // 0 = no guild
 	InventorySize int    `json:"inventorySize"`
+	LocationId    int    `json:"locationId"`
 }
 
 type Inventory struct {
@@ -128,7 +129,7 @@ type Equipment struct {
 
 type Creatures struct {
 	ID           int    `json:"id"`
-	Mame         string `json:"name"`
+	Name         string `json:"name"`
 	IsPet        bool   `json:"is_pet"`
 	Strength     int    `json:"strength"`
 	Constitution int    `json:"constitution"`

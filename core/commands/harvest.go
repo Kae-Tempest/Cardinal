@@ -9,6 +9,7 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
+	"strconv"
 	"time"
 )
 
@@ -18,9 +19,8 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
-		fmt.Println(data)
 		var player _struct.Player
-		selectErr := pgxscan.Select(ctx, db, &player, `SELECT * from players`)
+		selectErr := pgxscan.Get(ctx, db, &player, `SELECT * from players where name = $1`, i.Interaction.Member.User.GlobalName)
 		if selectErr != nil {
 			slog.Error("Error during select from database", selectErr)
 			return
@@ -28,14 +28,20 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 		utils.CheckLastActionFinish(player, db)
 
 		// create action
-		duration := time.Duration(data.Options[1].IntValue())
+		resourceChoice, _ := strconv.Atoi(data.Options[0].StringValue())
+		durationChoice, _ := strconv.Atoi(data.Options[1].StringValue())
+		var resource _struct.Resources
+		duration := time.Duration(durationChoice)
+		err := pgxscan.Get(ctx, db, &resource, `SELECT name, id FROM resources_types where id = $1`, resourceChoice)
+		if err != nil {
+			return
+		}
 		endAt := time.Now().Add(time.Second * duration)
-		utils.AddAction(player.ID, "harvest | duration:"+data.Options[1].StringValue(), db, endAt)
-
+		utils.AddAction(player.ID, "harvest"+resource.Name+"| duration:"+data.Options[1].StringValue(), db, endAt)
 		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("%s", player),
+				Content: fmt.Sprintf("%s begin to harvest %s for %s secondes", player.Username, resource.Name, data.Options[1].StringValue()),
 			},
 		})
 
@@ -53,7 +59,7 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 			for _, resourceType := range resourcesTypes {
 				choice := discordgo.ApplicationCommandOptionChoice{
 					Name:  resourceType.Name,
-					Value: resourceType.ID,
+					Value: strconv.Itoa(resourceType.ID),
 				}
 				choices = append(choices, &choice)
 			}
@@ -66,22 +72,23 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 				return
 			}
 
+			// TODO: Put data in DB ?
 			timeChoices := []*discordgo.ApplicationCommandOptionChoice{
 				{
 					Name:  "30min",
-					Value: 1800,
+					Value: "1800",
 				},
 				{
 					Name:  "1h",
-					Value: 3600,
+					Value: "3600",
 				},
 				{
 					Name:  "1h30",
-					Value: 5400,
+					Value: "5400",
 				},
 				{
 					Name:  "2h",
-					Value: 7200,
+					Value: "7200",
 				},
 			}
 

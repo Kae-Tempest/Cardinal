@@ -52,6 +52,10 @@ func loadInteractionCommand(s *discordgo.Session) {
 			},
 		},
 		{
+			Name:        "hunt",
+			Description: "Hunt creatures",
+		},
+		{
 			Name:        "harvest",
 			Description: "Harvest resources",
 			Options: []*discordgo.ApplicationCommandOption{

@@ -3,6 +3,7 @@ package utils
 import (
 	_struct "Raphael/core/struct"
 	"context"
+	"fmt"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
@@ -17,7 +18,7 @@ func CheckLastActionFinish(player _struct.Player, db *pgxpool.Pool) {
 	// Get last user action
 
 	var lastAction _struct.PlayerAction
-	selectErr := pgxscan.Select(ctx, db, &lastAction, `SELECT * FROM players_actions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, player.ID)
+	selectErr := pgxscan.Get(ctx, db, &lastAction, `SELECT * FROM players_actions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, player.ID)
 	if selectErr != nil {
 		slog.Error("Error during selecting in database", selectErr)
 		return
@@ -29,10 +30,10 @@ func CheckLastActionFinish(player _struct.Player, db *pgxpool.Pool) {
 		now := time.Now()
 
 		if strings.Contains(lastAction.Action, "duration") || time.Time.Before(lastAction.EndAt, now) {
-			duration := now.Sub(lastAction.CreatedAt)
+			duration := lastAction.CreatedAt.Sub(now)
 			upsertResource(player, db, lastAction, ctx, duration)
 		} else {
-			duration := lastAction.EndAt.Sub(lastAction.CreatedAt)
+			duration := lastAction.CreatedAt.Sub(lastAction.EndAt)
 			upsertResource(player, db, lastAction, ctx, duration)
 		}
 
@@ -50,23 +51,23 @@ func AddAction(id int, actionName string, db *pgxpool.Pool, endAt time.Time) {
 
 func upsertResource(player _struct.Player, db *pgxpool.Pool, action _struct.PlayerAction, ctx context.Context, duration time.Duration) {
 	var resourceTypes []_struct.ResourcesType
-
 	selectErr := pgxscan.Select(ctx, db, &resourceTypes, `SELECT * FROM resources_types`)
 	if selectErr != nil {
 		slog.Error("Error during selecting in database", selectErr)
 		return
 	}
-
 	for _, resourceType := range resourceTypes {
 		if strings.Contains(action.Action, resourceType.Name) {
+			fmt.Println(resourceType.Name, "Name")
 			var resource _struct.Resources
-			selectErr := pgxscan.Select(ctx, db, &resource, `SELECT id, name, quantities_per_min FROM resources`)
+			selectErr := pgxscan.Get(ctx, db, &resource, `SELECT id, name, quantities_per_min FROM resources where resources_type_id = $1`, resourceType.ID)
 			if selectErr != nil {
 				slog.Error("Error during selecting in database", selectErr)
 				return
 			}
-
+			fmt.Println(duration)
 			passedTime := math.Round(duration.Minutes() / 5)
+			fmt.Println(passedTime)
 			gatheredResources := int(passedTime) * resource.QuantitiesPerMin
 			_, upsertError := db.Exec(ctx, `INSERT INTO ressourceinventory (user_id, item_id, quantity) values ($1,$2,$3) on CONFLICT(item_id)
 					DO UPDATE SET quantity = excluded.quantity + ressourceinventory.quantity where ressourceinventory.user_id = excluded.user_id;`, player.ID, resource.ID, gatheredResources)

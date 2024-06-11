@@ -19,5 +19,10 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		commands.Setup(s, i, db)
 	case "move":
 		commands.Move(s, i, db)
+	case "harvest":
+		commands.Harvest(s, i, db)
+	case "hunt":
+		commands.Hunt(s, i, db)
+
 	}
 }
