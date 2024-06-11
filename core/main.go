@@ -23,6 +23,7 @@ func main() {
 		slog.Error("Error creating Discord session", err)
 		return
 	}
+	client.AddHandler(handler.Ready)
 
 	err = client.Open()
 	if err != nil {
@@ -30,8 +31,8 @@ func main() {
 		return
 	}
 
-	client.AddHandler(handler.MessageCreate)
 	loadInteractionCommand(client)
+	client.AddHandler(handler.MessageCreate)
 	client.AddHandler(handler.InteractionCreate)
 	client.Identify.Intents = discordgo.IntentGuildMessages
 
