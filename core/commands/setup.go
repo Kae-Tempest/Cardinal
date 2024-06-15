@@ -36,6 +36,7 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 		player.Level = 1
 		player.GuildID = 0
 		player.InventorySize = 10
+		player.LocationId = 1
 
 		parsePlayer, _ := json.Marshal(player)
 
@@ -49,20 +50,27 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 			slog.Error("Error during Interaction Response", err)
 			return
 		}
-		_, insertErr := db.Exec(ctx, `INSERT into players (name, server_id, username, race_id, job_id, exp, po , level, guild_id, inventory_size) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )`,
-			player.Name, player.ServerID, player.Username, player.RaceID, player.JobID, player.Exp, player.Po, player.Level, player.GuildID, player.InventorySize)
+		_, insertErr := db.Exec(ctx, `INSERT into players (name, server_id, username, race_id, job_id, exp, po , level, guild_id, inventory_size, location_id) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11 )`,
+			player.Name, player.ServerID, player.Username, player.RaceID, player.JobID, player.Exp, player.Po, player.Level, player.GuildID, player.InventorySize, player.LocationId)
 		if insertErr != nil {
 			slog.Error("Error during insert from database", insertErr)
 			return
 		}
-		var user []*_struct.Player
-		selectErr := pgxscan.Select(ctx, db, &user, `SELECT id from players where name = $1 LIMIT 1`, player.Name)
+
+		var user *_struct.Player
+		selectErr := pgxscan.Get(ctx, db, &user, `SELECT id from players where name = $1 LIMIT 1`, player.Name)
 		if selectErr != nil {
 			slog.Error("Error during select from database", selectErr)
 			return
 		}
 
-		utils.AddAction(user[0].ID, "create character", db, time.Now())
+		// TODO: Get basic stats of Race or Job
+
+		var stats _struct.Stats
+		_, insertErr = db.Exec(ctx, `INSERT into stats (user_id, hp,  strength, constitution, mana, stamina, dexterity, intelligence, wisdom, charisma) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			user.ID, stats.HP, stats.Strength, stats.Constitution, stats.Mana, stats.Stamina, stats.Dexterity, stats.Intelligence, stats.Wisdom, stats.Charisma)
+
+		utils.AddAction(user.ID, "create character", db, time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
