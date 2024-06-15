@@ -2,22 +2,18 @@ package commands
 
 import (
 	_struct "Raphael/core/struct"
+	"Raphael/core/utils"
 	"context"
-	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
-	"strings"
+	"math/rand"
 )
 
 func Hunt(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
 	ctx := context.Background()
 	/*
-	 * Selection Aleatoire de la creature celon l'emplacement et le niveau du joueur
-	 * * Choix dans la table des apparition
-	 * Début du combat -> Si dex joueur + haut que la creature le joueur commence sinon l'inverse
-	 * Creation d'un fils privé avec le joueur et le bot afin de ne pas flood le chat
 	 * Boucle While begin
 	 * envoie de la demande de choix du skill au joueur -> Attaque de base + 3 skill définis pars le joueur
 	 * en parralle choix automatique de l'attaque de la creature
@@ -26,48 +22,61 @@ func Hunt(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool
 	 * Mort joueur : perte de x PO + retour en ville
 	 * Mort Creature : Loot des Reward : { Po: X , Exp: X, items: [1,2,3] }
 	 */
-	// Get playet
+
+	// Get player
 	var player _struct.Player
 	selectPlayerErr := pgxscan.Get(ctx, db, &player, `SELECT * FROM players where name = $1 LIMIT 1`, i.Interaction.Member.User.GlobalName)
 	if selectPlayerErr != nil {
-		slog.Error("Error during select into database", selectPlayerErr)
+		slog.Error("Error during select player into database", selectPlayerErr)
+		return
+	}
+	var playerStats _struct.Stats
+	selectPlayerStatErr := pgxscan.Get(ctx, db, &playerStats, `SELECT * FROM stats where user_id = $1 LIMIT 1`, player.ID)
+	if selectPlayerStatErr != nil {
+		slog.Error("Error during select player stats into database", selectPlayerErr)
 		return
 	}
 
 	// Selection de la creature
-	//var creature _struct.Creatures
+	var locationCreature []_struct.CreatureSpawns
+	creaturesGetErr := pgxscan.Select(ctx, db, &locationCreature, `SELECT * FROM creaturespawn where emplacement_id = $1`, player.LocationId)
+	if creaturesGetErr != nil {
+		slog.Error("Error during select Creature's location into database", creaturesGetErr)
+		return
+	}
 
+	selectedCreatureID := locationCreature[rand.Intn(len(locationCreature))].CreatureID
+	var creature _struct.Creatures
+	creatureGetErr := pgxscan.Get(ctx, db, &creature, `SELECT * FROM creatures where id = $1`, selectedCreatureID)
+	if creatureGetErr != nil {
+		slog.Error("Error during selecting Creature into database", creatureGetErr)
+		return
+	}
 	// definition de l'ordre de jeux
 
-	// get Channel fight ID
-	channels, getChannelsErr := s.GuildChannels(i.GuildID)
-	if getChannelsErr != nil {
-		return
+	var order []_struct.FightOrder
+	p := _struct.FightOrder{
+		Name: "Player",
+		ID:   player.ID,
 	}
-	var parentID string
-	for _, channel := range channels {
-		if strings.Contains(channel.Name, "fights") && channel.Type == discordgo.ChannelTypeGuildText {
-			parentID = channel.ID
-		}
-	}
-	// creation du fils privé
-	threadData := discordgo.ThreadStart{
-		Name:                fmt.Sprintf("%s VS %s", player.Name, player.Name),
-		AutoArchiveDuration: 60,
-		Invitable:           false,
+	c := _struct.FightOrder{
+		Name: "Creature",
+		ID:   creature.ID,
 	}
 
-	textMessage, textErr := s.ChannelMessageSend(parentID, "Hunt Begin..")
-	if textErr != nil {
-		slog.Error("Error during Thread Channel Creation", textErr)
-		return
+	if playerStats.Dexterity > creature.Dexterity {
+
+		order = append(order, p)
+		order = append(order, c)
+	} else {
+		order = append(order, c)
+		order = append(order, p)
 	}
 
-	_, threadErr := s.MessageThreadStartComplex(parentID, textMessage.ID, &threadData)
-	if threadErr != nil {
-		slog.Error("Error during Thread Channel Creation", threadErr)
-		return
-	}
+	threadChannel := utils.CreateHuntFightThead(s, i, player.Username, creature.Name)
+	// Boucle while
+	utils.HuntFight(s, player, creature, order, threadChannel, db)
+
 	// envoie du choix de skill
 
 	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

@@ -68,6 +68,7 @@ type Skill struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
 	JobID        int    `json:"job_id"`
+	Type         string `json:"type"`
 	AccessAll    bool   `json:"access_all"` // If true, all jobs can use this skill
 	Description  string `json:"description"`
 	Strength     int    `json:"strength"`
@@ -99,6 +100,7 @@ type SummonBeast struct {
 }
 type Stats struct {
 	UserID       int `json:"user_id"`
+	HP           int `json:"HP"`
 	Strength     int `json:"strength"`
 	Constitution int `json:"constitution"`
 	Mana         int `json:"mana"`
@@ -106,6 +108,7 @@ type Stats struct {
 	Dexterity    int `json:"dexterity"`
 	Intelligence int `json:"intelligence"`
 	Charisma     int `json:"charisma"`
+	Wisdom       int `json:"wisdom"`
 }
 type PetsMounts struct {
 	ID          int  `json:"id"`
@@ -131,6 +134,8 @@ type Creatures struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
 	IsPet        bool   `json:"is_pet"`
+	Level        int    `json:"level"`
+	HP           int    `json:"HP"`
 	Strength     int    `json:"strength"`
 	Constitution int    `json:"constitution"`
 	Mana         int    `json:"mana"`
@@ -140,6 +145,14 @@ type Creatures struct {
 	Charisma     int    `json:"charisma"`
 	Wisdom       int    `json:"wisdom"`
 }
+
+type CreatureSpawns struct {
+	CreatureID    int `json:"creatureID"`
+	EmplacementID int `json:"emplacementID"`
+	LevelRequired int `json:"levelRequired"`
+	SpawnRate     int `json:"spawnRate"`
+}
+
 type Quests struct {
 	ID          int          `json:"id"`
 	Title       string       `json:"title"`
@@ -189,4 +202,9 @@ type PlayerAction struct {
 	Action    string    `json:"action"`
 	CreatedAt time.Time `json:"created_at"`
 	EndAt     time.Time `json:"end_at"`
+}
+
+type FightOrder struct {
+	Name string
+	ID   int
 }
