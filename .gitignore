@@ -4,3 +4,4 @@ docker
 server
 web
 core/.env
+init-db.sql
