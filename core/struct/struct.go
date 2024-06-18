@@ -24,9 +24,17 @@ type Inventory struct {
 }
 
 type Job struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"` // description of the job
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Description  string `json:"description"` // description of the job
+	Strength     int    `json:"strength"`
+	Constitution int    `json:"constitution"`
+	Mana         int    `json:"mana"`
+	Stamina      int    `json:"stamina"`
+	Dexterity    int    `json:"dexterity"`
+	Intelligence int    `json:"intelligence"`
+	Wisdom       int    `json:"wisdom"`
+	Charisma     int    `json:"charisma"`
 }
 
 type Race struct {
@@ -67,9 +75,7 @@ type GuildMembers struct {
 type Skill struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
-	JobID        int    `json:"job_id"`
-	Type         string `json:"type"`
-	AccessAll    bool   `json:"access_all"` // If true, all jobs can use this skill
+	Type         string `json:"type"` // physic or magic
 	Description  string `json:"description"`
 	Strength     int    `json:"strength"`
 	Constitution int    `json:"constitution"`
@@ -79,6 +85,36 @@ type Skill struct {
 	Intelligence int    `json:"intelligence"`
 	Wisdom       int    `json:"wisdom"`
 	Charisma     int    `json:"charisma"`
+}
+
+type JobSkill struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Type         string `json:"type"` // physic or magic
+	Description  string `json:"description"`
+	Strength     int    `json:"strength"`
+	Constitution int    `json:"constitution"`
+	Mana         int    `json:"mana"`
+	Stamina      int    `json:"stamina"`
+	Dexterity    int    `json:"dexterity"`
+	Intelligence int    `json:"intelligence"`
+	Wisdom       int    `json:"wisdom"`
+	Charisma     int    `json:"charisma"`
+}
+
+type UserSkill struct {
+	UserId  int
+	SkillID int
+}
+
+type UserJobSkill struct {
+	UserId  int
+	SkillID int
+}
+
+type CreatureSkill struct {
+	CreatureId int
+	SkillID    int
 }
 
 type UserPet struct {

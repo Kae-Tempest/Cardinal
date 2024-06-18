@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"Raphael/core/rpg"
 	_struct "Raphael/core/struct"
-	"Raphael/core/utils"
 	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -25,7 +25,7 @@ func Move(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool
 			slog.Error("Error during select from database", selectErr)
 			return
 		}
-		utils.CheckLastActionFinish(player, db)
+		rpg.CheckLastActionFinish(player, db)
 
 		locationID, _ := strconv.Atoi(data.Options[0].StringValue())
 		var locationName string
@@ -49,7 +49,7 @@ func Move(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool
 			return
 		}
 		// insert player action
-		utils.AddAction(player.ID, "move to "+locationName, db, time.Now())
+		rpg.AddAction(player.ID, "move to "+locationName, db, time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()

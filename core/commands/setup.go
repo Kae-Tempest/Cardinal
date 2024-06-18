@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"Raphael/core/rpg"
 	_struct "Raphael/core/struct"
-	"Raphael/core/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -66,11 +66,18 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 
 		// TODO: Get basic stats of Race or Job
 
+		var job _struct.Job
+		jobSelectErr := pgxscan.Get(ctx, db, &job, `SELECT * from jobs where id = $1`, player.JobID)
+		if jobSelectErr != nil {
+			slog.Error("Error during select from database", jobSelectErr)
+			return
+		}
+
 		var stats _struct.Stats
 		_, insertErr = db.Exec(ctx, `INSERT into stats (user_id, hp,  strength, constitution, mana, stamina, dexterity, intelligence, wisdom, charisma) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			user.ID, stats.HP, stats.Strength, stats.Constitution, stats.Mana, stats.Stamina, stats.Dexterity, stats.Intelligence, stats.Wisdom, stats.Charisma)
 
-		utils.AddAction(user.ID, "create character", db, time.Now())
+		rpg.AddAction(user.ID, "create character", db, time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()

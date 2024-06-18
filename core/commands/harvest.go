@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"Raphael/core/rpg"
 	_struct "Raphael/core/struct"
-	"Raphael/core/utils"
 	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -25,7 +25,7 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 			slog.Error("Error during select from database", selectErr)
 			return
 		}
-		utils.CheckLastActionFinish(player, db)
+		rpg.CheckLastActionFinish(player, db)
 
 		// create action
 		resourceChoice, _ := strconv.Atoi(data.Options[0].StringValue())
@@ -37,7 +37,7 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 			return
 		}
 		endAt := time.Now().Add(time.Second * duration)
-		utils.AddAction(player.ID, "harvest"+resource.Name+"| duration:"+data.Options[1].StringValue(), db, endAt)
+		rpg.AddAction(player.ID, "harvest"+resource.Name+"| duration:"+data.Options[1].StringValue(), db, endAt)
 		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{

@@ -1,4 +1,4 @@
-package utils
+package rpg
 
 import (
 	_struct "Raphael/core/struct"
@@ -8,78 +8,10 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
-	"math"
 	"math/rand"
+	"strconv"
 	"strings"
-	"time"
 )
-
-func CheckLastActionFinish(player _struct.Player, db *pgxpool.Pool) {
-	ctx := context.Background()
-
-	// Get last user action
-
-	var lastAction _struct.PlayerAction
-	selectErr := pgxscan.Get(ctx, db, &lastAction, `SELECT * FROM players_actions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, player.ID)
-	if selectErr != nil {
-		slog.Error("Error during selecting in database", selectErr)
-		return
-	}
-
-	// check is last action is duration Action
-
-	if strings.Contains(lastAction.Action, "duration") || strings.Contains(lastAction.Action, "idle") {
-		now := time.Now()
-
-		if strings.Contains(lastAction.Action, "duration") || time.Time.Before(lastAction.EndAt, now) {
-			duration := lastAction.CreatedAt.Sub(now)
-			upsertResource(player, db, lastAction, ctx, duration)
-		} else {
-			duration := lastAction.CreatedAt.Sub(lastAction.EndAt)
-			upsertResource(player, db, lastAction, ctx, duration)
-		}
-
-	}
-}
-
-func AddAction(id int, actionName string, db *pgxpool.Pool, endAt time.Time) {
-
-	_, insertErr := db.Exec(context.Background(), `INSERT into players_actions values ($1, $2, $3, $4)`, id, actionName, time.Now().Format("02_01_2006 15:04:05 -07:00"), endAt.Format("02_01_2006 15:04:05 -07:00"))
-	if insertErr != nil {
-		slog.Error("Error during insert action in database", insertErr)
-		return
-	}
-}
-
-func upsertResource(player _struct.Player, db *pgxpool.Pool, action _struct.PlayerAction, ctx context.Context, duration time.Duration) {
-	var resourceTypes []_struct.ResourcesType
-	selectErr := pgxscan.Select(ctx, db, &resourceTypes, `SELECT * FROM resources_types`)
-	if selectErr != nil {
-		slog.Error("Error during selecting in database", selectErr)
-		return
-	}
-	for _, resourceType := range resourceTypes {
-		if strings.Contains(action.Action, resourceType.Name) {
-			fmt.Println(resourceType.Name, "Name")
-			var resource _struct.Resources
-			selectErr := pgxscan.Get(ctx, db, &resource, `SELECT id, name, quantities_per_min FROM resources where resources_type_id = $1`, resourceType.ID)
-			if selectErr != nil {
-				slog.Error("Error during selecting in database", selectErr)
-				return
-			}
-			fmt.Println(duration)
-			passedTime := math.Round(duration.Minutes() / 5)
-			fmt.Println(passedTime)
-			gatheredResources := int(passedTime) * resource.QuantitiesPerMin
-			_, upsertError := db.Exec(ctx, `INSERT INTO ressourceinventory (user_id, item_id, quantity) values ($1,$2,$3) on CONFLICT(item_id)
-					DO UPDATE SET quantity = excluded.quantity + ressourceinventory.quantity where ressourceinventory.user_id = excluded.user_id;`, player.ID, resource.ID, gatheredResources)
-			if upsertError != nil {
-				slog.Error("Error during upsert in database", upsertError)
-				return
-			}
-		}
-	}
-}
 
 func CreateHuntFightThead(s *discordgo.Session, i *discordgo.InteractionCreate, playerName string, creatureName string) *discordgo.Channel {
 	// get Channel fight ID
@@ -121,8 +53,8 @@ type skill struct {
 
 func HuntFight(s *discordgo.Session, player _struct.Player, creature _struct.Creatures, order []_struct.FightOrder, threadChannel *discordgo.Channel, db *pgxpool.Pool) {
 	ctx := context.Background()
-	var playerSkill skill
-	var creatureSkill skill
+	var playerSkill *skill
+	var creatureSkill *skill
 	var playerChosenSkill _struct.Skill
 	var creatureChosenSkill _struct.Skill
 	var playerStats _struct.Stats
@@ -134,15 +66,24 @@ func HuntFight(s *discordgo.Session, player _struct.Player, creature _struct.Cre
 	}
 
 	if order[0].Name == "Player" {
-		playerSkill, creatureSkill = playerTurn(player, threadChannel), creatureTurn(creature)
-		getSkillErr := pgxscan.Get(ctx, db, &playerChosenSkill, `SELECT * from skills where name = $1`, playerSkill.Name)
-		getSkillErr = pgxscan.Get(ctx, db, &creatureChosenSkill, `SELECT * from skills where name = $1`, creatureSkill.Name)
+		fmt.Println("player first")
+		playerSkill, creatureSkill = playerTurn(player, threadChannel, db, s), creatureTurn(creature, db)
+		if creatureSkill == nil || playerSkill == nil {
+			slog.Error("Error during choosing Skill")
+			return
+		}
+		getSkillErr := pgxscan.Get(ctx, db, &playerChosenSkill, `SELECT * from skills where name = $1`, playerSkill.ID)
+		getSkillErr = pgxscan.Get(ctx, db, &creatureChosenSkill, `SELECT * from skills where name = $1`, creatureSkill.ID)
 
 		if getSkillErr != nil {
 			slog.Error("Error during getting Skill in database", getSkillErr)
 		}
 	} else {
-		creatureSkill, playerSkill = creatureTurn(creature), playerTurn(player, threadChannel)
+		creatureSkill, playerSkill = creatureTurn(creature, db), playerTurn(player, threadChannel, db, s)
+		if creatureSkill == nil || playerSkill == nil {
+			slog.Error("Error during choosing Skill")
+			return
+		}
 		getSkillErr := pgxscan.Get(ctx, db, &playerChosenSkill, `SELECT * from skills where name = $1`, playerSkill.Name)
 		getSkillErr = pgxscan.Get(ctx, db, &creatureChosenSkill, `SELECT * from skills where name = $1`, creatureSkill.Name)
 
@@ -251,43 +192,177 @@ func HuntFight(s *discordgo.Session, player _struct.Player, creature _struct.Cre
 	}
 }
 
-func creatureTurn(creature _struct.Creatures) skill {
+func creatureTurn(creature _struct.Creatures, db *pgxpool.Pool) *skill {
+	var basicCreatureSkill []*skill
+
+	basicCreatureSkill = append(basicCreatureSkill, &skill{
+		Type: "attack",
+		ID:   1,
+		Name: "Basic attack",
+	})
+	basicCreatureSkill = append(basicCreatureSkill, &skill{
+		Type: "block",
+		ID:   2,
+		Name: "Basic block",
+	})
+	basicCreatureSkill = append(basicCreatureSkill, &skill{
+		Type: "dodge",
+		ID:   3,
+		Name: "Basic dodge",
+	})
+
 	// Choix d'une attaque aleatoire | Monstre < lvl 15 = attaque de base, esquive , blocage
 	if creature.Level < 15 {
 		r := rand.Intn(10)
-		switch {
-		case r <= 5:
-			return skill{
-				Type: "attack",
-				ID:   0,
-				Name: "Basic attack",
+		for _, skill := range basicCreatureSkill {
+			switch {
+			case r <= 5 && skill.Name == "attack":
+				return skill
+			case r > 6 && r < 8 && skill.Name == "block":
+				return skill
+			case r >= 8 && skill.Name == "dodge":
+				return skill
 			}
-		case r > 6 && r < 8:
-			return skill{
-				Type: "block",
-				ID:   0,
-				Name: "Basic block",
-			}
-		case r >= 8:
-			return skill{
-				Type: "dodge",
-				ID:   0,
-				Name: "Basic dodge",
-			}
-
 		}
-	} else {
+	} else if creature.Level >= 15 {
 		// get random skill of selected monster
+		var creatureSkills []_struct.Skill
+		selectErr := pgxscan.Select(context.Background(), db, &creatureSkills, `select id, name from skills s join creature_skill cs on s.id = cs.skill_id where cs.creature_id = $1`, creature.ID)
+		if selectErr != nil {
+			slog.Error("Error during selection creature Skills into databases from creature ID", selectErr)
+			return nil
+		}
+
+		for _, cSkill := range creatureSkills {
+			basicCreatureSkill = append(basicCreatureSkill, &skill{
+				Type: cSkill.Type,
+				ID:   cSkill.ID,
+				Name: cSkill.Name,
+			})
+		}
+
+		r := rand.Intn(10)
+		for _, skill := range basicCreatureSkill {
+			switch {
+			case r <= 5 && r > 3 && skill.Name == "attack":
+				return skill
+			case r > 6 && r < 8 && skill.Name == "block":
+				return skill
+			case r >= 8 && skill.Name == "dodge":
+				return skill
+			default:
+				return skill
+			}
+		}
 	}
 	// renvoie du skill choisie
-	return skill{}
+	return nil
 }
 
-func playerTurn(player _struct.Player, threadChannel *discordgo.Channel) skill {
-	// Get 3 skill + atk de base + dodge + block
+func playerTurn(player _struct.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session) *skill {
+	var basicPlayerSkill []*skill
 
+	basicPlayerSkill = append(basicPlayerSkill, &skill{
+		Type: "attack",
+		ID:   1,
+		Name: "Basic attack",
+	})
+	basicPlayerSkill = append(basicPlayerSkill, &skill{
+		Type: "block",
+		ID:   2,
+		Name: "Basic block",
+	})
+	basicPlayerSkill = append(basicPlayerSkill, &skill{
+		Type: "dodge",
+		ID:   3,
+		Name: "Basic dodge",
+	})
+
+	// Get 3 skill + atk de base + dodge + block
+	var playerSkills []_struct.Skill
+	selectErr := pgxscan.Select(context.Background(), db, &playerSkills, `select id, name from skills s join user_skill us on s.id = us.skill_id join user_job_skill ujs on s.id = ujs.job_skill_id where us.user_id = $1 && ujs.user_id = $1`, player.ID)
+	if selectErr != nil {
+		slog.Error("Error during selection player Skills into databases", selectErr)
+	}
+
+	// creer un select btn pour les skills | creer les btn pour les basicSkill
+
+	btnAtk := discordgo.Button{
+		Label:    "Basic attack",
+		Style:    discordgo.PrimaryButton,
+		CustomID: "attack",
+	}
+	btnblk := discordgo.Button{
+		Label:    "Basic block",
+		Style:    discordgo.PrimaryButton,
+		CustomID: "block",
+	}
+	btnDdg := discordgo.Button{
+		Label:    "Basic dodge",
+		Style:    discordgo.PrimaryButton,
+		CustomID: "dodge",
+	}
+
+	var skillOptions []discordgo.SelectMenuOption
+	if len(playerSkills) > 0 {
+		for _, playerSkill := range playerSkills {
+			skillOptions = append(skillOptions, discordgo.SelectMenuOption{
+				Label:       playerSkill.Name,
+				Value:       strconv.Itoa(playerSkill.ID),
+				Description: playerSkill.Description,
+				Default:     false,
+			})
+		}
+	}
+	var selectbtn discordgo.SelectMenu
+	if len(skillOptions) > 0 {
+		selectbtn = discordgo.SelectMenu{
+			MenuType:    discordgo.StringSelectMenu,
+			CustomID:    "skillselectbtn",
+			Placeholder: "You're Skills",
+			Options:     skillOptions,
+		}
+	} else {
+		selectbtn = discordgo.SelectMenu{
+			MenuType:    discordgo.StringSelectMenu,
+			CustomID:    "skillselectbtn",
+			Placeholder: "You're Skills",
+			Disabled:    true,
+			Options: []discordgo.SelectMenuOption{
+				{
+					Label:       "Any",
+					Value:       "0",
+					Description: "any",
+					Default:     false,
+				},
+			},
+		}
+	}
+
+	messageData := discordgo.MessageSend{
+		Content: "Choose you're skill",
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					btnAtk, btnDdg, btnblk,
+				},
+			},
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					selectbtn,
+				},
+			},
+		},
+	}
 	// envoyer le messages des skills
+
+	_, err := s.ChannelMessageSendComplex(threadChannel.ID, &messageData)
+	if err != nil {
+		slog.Error("Error during sending the message", err)
+	}
+
 	// reception du choix du joueur
+
 	// renvoie du skill choisie
-	return skill{}
+	return nil
 }

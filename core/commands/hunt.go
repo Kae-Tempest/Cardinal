@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"Raphael/core/rpg"
 	_struct "Raphael/core/struct"
-	"Raphael/core/utils"
 	"context"
 	"github.com/bwmarrin/discordgo"
 	"github.com/georgysavva/scany/v2/pgxscan"
@@ -73,9 +73,9 @@ func Hunt(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool
 		order = append(order, p)
 	}
 
-	threadChannel := utils.CreateHuntFightThead(s, i, player.Username, creature.Name)
+	threadChannel := rpg.CreateHuntFightThead(s, i, player.Username, creature.Name)
 	// Boucle while
-	utils.HuntFight(s, player, creature, order, threadChannel, db)
+	rpg.HuntFight(s, player, creature, order, threadChannel, db)
 
 	// envoie du choix de skill
 
