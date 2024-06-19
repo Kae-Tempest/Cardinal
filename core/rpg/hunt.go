@@ -51,7 +51,7 @@ type skill struct {
 	Name string `json:"name"`
 }
 
-func HuntFight(s *discordgo.Session, player entities.Player, creature entities.Creatures, order []entities.FightOrder, threadChannel *discordgo.Channel, db *pgxpool.Pool) {
+func HuntFight(s *discordgo.Session, player entities.Player, creature entities.Creatures, order []entities.FightOrder, threadChannel *discordgo.Channel, db *pgxpool.Pool, i *discordgo.InteractionCreate) {
 	ctx := context.Background()
 	var playerSkill *skill
 	var creatureSkill *skill
@@ -67,7 +67,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 
 	if order[0].Name == "Player" {
 		fmt.Println("player first")
-		playerSkill, creatureSkill = playerTurn(player, threadChannel, db, s), creatureTurn(creature, db)
+		playerSkill, creatureSkill = playerTurn(player, threadChannel, db, s, i), creatureTurn(creature, db)
 		if creatureSkill == nil || playerSkill == nil {
 			slog.Error("Error during choosing Skill")
 			return
@@ -79,7 +79,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 			slog.Error("Error during getting Skill in database", getSkillErr)
 		}
 	} else {
-		creatureSkill, playerSkill = creatureTurn(creature, db), playerTurn(player, threadChannel, db, s)
+		creatureSkill, playerSkill = creatureTurn(creature, db), playerTurn(player, threadChannel, db, s, i)
 		if creatureSkill == nil || playerSkill == nil {
 			slog.Error("Error during choosing Skill")
 			return
@@ -259,7 +259,7 @@ func creatureTurn(creature entities.Creatures, db *pgxpool.Pool) *skill {
 	return nil
 }
 
-func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session) *skill {
+func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session, i *discordgo.InteractionCreate) *skill {
 	var basicPlayerSkill []*skill
 
 	basicPlayerSkill = append(basicPlayerSkill, &skill{
@@ -361,8 +361,21 @@ func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pg
 		slog.Error("Error during sending the message", err)
 	}
 
+	//var ChoosenSkill *skill
 	// reception du choix du joueur
-
+	func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		data := i.ApplicationCommandData()
+		switch data.Name {
+		case "attack":
+			fmt.Println(data.Name)
+		case "block":
+			fmt.Println(data.Name)
+		case "dodge":
+			fmt.Println(data.Name)
+		case "skillselectbtn":
+			fmt.Println(data.Name)
+		}
+	}(s, i)
 	// renvoie du skill choisie
 	return nil
 }

@@ -74,7 +74,7 @@ func Hunt(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCre
 
 	threadChannel := rpg.CreateHuntFightThead(s, i, player.Username, creature.Name)
 	// Boucle while
-	rpg.HuntFight(s, player, creature, order, threadChannel, db)
+	rpg.HuntFight(s, player, creature, order, threadChannel, db, i)
 
 	// envoie du choix de skill
 
