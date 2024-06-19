@@ -1,7 +1,7 @@
 package rpg
 
 import (
-	_struct "Raphael/core/struct"
+	"Cardinal/core/entities"
 	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -51,13 +51,13 @@ type skill struct {
 	Name string `json:"name"`
 }
 
-func HuntFight(s *discordgo.Session, player _struct.Player, creature _struct.Creatures, order []_struct.FightOrder, threadChannel *discordgo.Channel, db *pgxpool.Pool) {
+func HuntFight(s *discordgo.Session, player entities.Player, creature entities.Creatures, order []entities.FightOrder, threadChannel *discordgo.Channel, db *pgxpool.Pool) {
 	ctx := context.Background()
 	var playerSkill *skill
 	var creatureSkill *skill
-	var playerChosenSkill _struct.Skill
-	var creatureChosenSkill _struct.Skill
-	var playerStats _struct.Stats
+	var playerChosenSkill entities.Skill
+	var creatureChosenSkill entities.Skill
+	var playerStats entities.Stats
 
 	getPlayerStatErr := pgxscan.Get(ctx, db, &playerStats, `SELECT * FROM stats where user_id = $1`, player.ID)
 	if getPlayerStatErr != nil {
@@ -192,7 +192,7 @@ func HuntFight(s *discordgo.Session, player _struct.Player, creature _struct.Cre
 	}
 }
 
-func creatureTurn(creature _struct.Creatures, db *pgxpool.Pool) *skill {
+func creatureTurn(creature entities.Creatures, db *pgxpool.Pool) *skill {
 	var basicCreatureSkill []*skill
 
 	basicCreatureSkill = append(basicCreatureSkill, &skill{
@@ -226,7 +226,7 @@ func creatureTurn(creature _struct.Creatures, db *pgxpool.Pool) *skill {
 		}
 	} else if creature.Level >= 15 {
 		// get random skill of selected monster
-		var creatureSkills []_struct.Skill
+		var creatureSkills []entities.Skill
 		selectErr := pgxscan.Select(context.Background(), db, &creatureSkills, `select id, name from skills s join creature_skill cs on s.id = cs.skill_id where cs.creature_id = $1`, creature.ID)
 		if selectErr != nil {
 			slog.Error("Error during selection creature Skills into databases from creature ID", selectErr)
@@ -259,7 +259,7 @@ func creatureTurn(creature _struct.Creatures, db *pgxpool.Pool) *skill {
 	return nil
 }
 
-func playerTurn(player _struct.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session) *skill {
+func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session) *skill {
 	var basicPlayerSkill []*skill
 
 	basicPlayerSkill = append(basicPlayerSkill, &skill{
@@ -279,7 +279,7 @@ func playerTurn(player _struct.Player, threadChannel *discordgo.Channel, db *pgx
 	})
 
 	// Get 3 skill + atk de base + dodge + block
-	var playerSkills []_struct.Skill
+	var playerSkills []entities.Skill
 	selectErr := pgxscan.Select(context.Background(), db, &playerSkills, `select id, name from skills s join user_skill us on s.id = us.skill_id join user_job_skill ujs on s.id = ujs.job_skill_id where us.user_id = $1 && ujs.user_id = $1`, player.ID)
 	if selectErr != nil {
 		slog.Error("Error during selection player Skills into databases", selectErr)

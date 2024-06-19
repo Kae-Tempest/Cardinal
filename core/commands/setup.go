@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"Raphael/core/rpg"
-	_struct "Raphael/core/struct"
+	"Cardinal/core/entities"
+	"Cardinal/core/rpg"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,14 +14,13 @@ import (
 	"time"
 )
 
-func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
-	ctx := context.Background()
+func Setup(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
 
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
 
-		var player _struct.Player
+		var player entities.Player
 
 		raceID, _ := strconv.Atoi(data.Options[1].StringValue())
 		jobID, _ := strconv.Atoi(data.Options[2].StringValue())
@@ -57,7 +56,7 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 			return
 		}
 
-		var user *_struct.Player
+		var user *entities.Player
 		selectErr := pgxscan.Get(ctx, db, &user, `SELECT id from players where name = $1 LIMIT 1`, player.Name)
 		if selectErr != nil {
 			slog.Error("Error during select from database", selectErr)
@@ -66,25 +65,25 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 
 		// TODO: Get basic stats of Race or Job
 
-		var job _struct.Job
+		var job entities.Job
 		jobSelectErr := pgxscan.Get(ctx, db, &job, `SELECT * from jobs where id = $1`, player.JobID)
 		if jobSelectErr != nil {
 			slog.Error("Error during select from database", jobSelectErr)
 			return
 		}
 
-		var stats _struct.Stats
+		var stats entities.Stats
 		_, insertErr = db.Exec(ctx, `INSERT into stats (user_id, hp,  strength, constitution, mana, stamina, dexterity, intelligence, wisdom, charisma) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			user.ID, stats.HP, stats.Strength, stats.Constitution, stats.Mana, stats.Stamina, stats.Dexterity, stats.Intelligence, stats.Wisdom, stats.Charisma)
 
-		rpg.AddAction(user.ID, "create character", db, time.Now())
+		rpg.AddAction(ctx, user.ID, "create character", db, time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
 		var choices []*discordgo.ApplicationCommandOptionChoice
 		switch {
 		case data.Options[1].Focused:
-			var races []*_struct.Race
+			var races []*entities.Race
 			selectErr := pgxscan.Select(ctx, db, &races, `SELECT * FROM races`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)
@@ -99,7 +98,7 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 				choices = append(choices, &choice)
 			}
 		case data.Options[2].Focused:
-			var jobs []*_struct.Job
+			var jobs []*entities.Job
 			selectErr := pgxscan.Select(ctx, db, &jobs, `SELECT * FROM jobs`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)

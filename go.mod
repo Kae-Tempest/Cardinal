@@ -1,4 +1,4 @@
-module Raphael
+module Cardinal
 
 go 1.22
 

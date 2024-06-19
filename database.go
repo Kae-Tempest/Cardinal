@@ -1,4 +1,4 @@
-package database
+package Cardinal
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func Connect() *pgxpool.Pool {
+func DatabaseConnect() *pgxpool.Pool {
 	ctx := context.Background()
 	db, _ := pgxpool.New(ctx, os.Getenv("DB_URL"))
 

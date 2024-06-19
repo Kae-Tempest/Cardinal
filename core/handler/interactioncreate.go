@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"Raphael/core/commands"
-	"Raphael/core/database"
+	"Cardinal"
+	"Cardinal/core/commands"
+	"context"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -10,19 +11,19 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Member.User.Bot {
 		return
 	}
-	db := database.Connect()
+	ctx := context.Background()
+	db := Cardinal.DatabaseConnect()
 	data := i.ApplicationCommandData()
 	switch data.Name {
 	case "ping":
 		commands.Ping(s, i)
 	case "setup":
-		commands.Setup(s, i, db)
+		commands.Setup(ctx, s, i, db)
 	case "move":
-		commands.Move(s, i, db)
+		commands.Move(ctx, s, i, db)
 	case "harvest":
-		commands.Harvest(s, i, db)
+		commands.Harvest(ctx, s, i, db)
 	case "hunt":
-		commands.Hunt(s, i, db)
-
+		commands.Hunt(ctx, s, i, db)
 	}
 }
