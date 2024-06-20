@@ -3,6 +3,7 @@ package handler
 import (
 	"Cardinal"
 	"Cardinal/core/commands"
+	"Cardinal/core/tools"
 	"context"
 	"github.com/bwmarrin/discordgo"
 )
@@ -18,12 +19,16 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		data := i.MessageComponentData()
 		switch data.CustomID {
 		case "attack":
+			tools.ClearInteractionMessage(s, i)
 			break
 		case "block":
+			tools.ClearInteractionMessage(s, i)
 			break
 		case "dodge":
+			tools.ClearInteractionMessage(s, i)
 			break
 		case "skillselectbtn":
+			tools.ClearInteractionMessage(s, i)
 			break
 		}
 	case discordgo.InteractionApplicationCommand:
