@@ -506,5 +506,13 @@ func waitForButtonInteraction(s *discordgo.Session, messageID, channelID string,
 		return "", err
 	}
 
+	_ = s.InteractionRespond(result.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content:    "",
+			Components: []discordgo.MessageComponent{},
+		},
+	})
+
 	return result.MessageComponentData().CustomID, nil
 }
