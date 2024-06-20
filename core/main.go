@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Raphael/core/handler"
+	"Cardinal/core/handler"
 	"fmt"
 	"log/slog"
 	"os"

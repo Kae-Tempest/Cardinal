@@ -1,8 +1,8 @@
 package commands
 
 import (
-	_struct "Raphael/core/struct"
-	"Raphael/core/utils"
+	"Cardinal/core/entities"
+	"Cardinal/core/rpg"
 	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -13,31 +13,30 @@ import (
 	"time"
 )
 
-func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
-	ctx := context.Background()
+func Harvest(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
 
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
-		var player _struct.Player
+		var player entities.Player
 		selectErr := pgxscan.Get(ctx, db, &player, `SELECT * from players where name = $1`, i.Interaction.Member.User.GlobalName)
 		if selectErr != nil {
 			slog.Error("Error during select from database", selectErr)
 			return
 		}
-		utils.CheckLastActionFinish(player, db)
+		rpg.CheckLastActionFinish(ctx, player, db)
 
 		// create action
 		resourceChoice, _ := strconv.Atoi(data.Options[0].StringValue())
 		durationChoice, _ := strconv.Atoi(data.Options[1].StringValue())
-		var resource _struct.Resources
+		var resource entities.Resources
 		duration := time.Duration(durationChoice)
 		err := pgxscan.Get(ctx, db, &resource, `SELECT name, id FROM resources_types where id = $1`, resourceChoice)
 		if err != nil {
 			return
 		}
 		endAt := time.Now().Add(time.Second * duration)
-		utils.AddAction(player.ID, "harvest"+resource.Name+"| duration:"+data.Options[1].StringValue(), db, endAt)
+		rpg.AddAction(ctx, player.ID, "harvest"+resource.Name+"| duration:"+data.Options[1].StringValue(), db, endAt)
 		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -50,7 +49,7 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 		var choices []*discordgo.ApplicationCommandOptionChoice
 		switch {
 		case data.Options[0].Focused:
-			var resourcesTypes []_struct.ResourcesType
+			var resourcesTypes []entities.ResourcesType
 			selectErr := pgxscan.Select(ctx, db, &resourcesTypes, `SELECT * FROM resources_types`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)
@@ -65,7 +64,7 @@ func Harvest(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.P
 			}
 
 		case data.Options[1].Focused:
-			var resources []_struct.Resources
+			var resources []entities.Resources
 			selectErr := pgxscan.Select(ctx, db, &resources, `SELECT name, id FROM resources`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)

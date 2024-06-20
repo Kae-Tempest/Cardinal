@@ -1,8 +1,8 @@
 package commands
 
 import (
-	_struct "Raphael/core/struct"
-	"Raphael/core/utils"
+	"Cardinal/core/entities"
+	"Cardinal/core/rpg"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,14 +14,13 @@ import (
 	"time"
 )
 
-func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
-	ctx := context.Background()
+func Setup(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
 
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
 
-		var player _struct.Player
+		var player entities.Player
 
 		raceID, _ := strconv.Atoi(data.Options[1].StringValue())
 		jobID, _ := strconv.Atoi(data.Options[2].StringValue())
@@ -36,6 +35,7 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 		player.Level = 1
 		player.GuildID = 0
 		player.InventorySize = 10
+		player.LocationId = 1
 
 		parsePlayer, _ := json.Marshal(player)
 
@@ -49,27 +49,41 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 			slog.Error("Error during Interaction Response", err)
 			return
 		}
-		_, insertErr := db.Exec(ctx, `INSERT into players (name, server_id, username, race_id, job_id, exp, po , level, guild_id, inventory_size) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )`,
-			player.Name, player.ServerID, player.Username, player.RaceID, player.JobID, player.Exp, player.Po, player.Level, player.GuildID, player.InventorySize)
+		_, insertErr := db.Exec(ctx, `INSERT into players (name, server_id, username, race_id, job_id, exp, po , level, guild_id, inventory_size, location_id) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11 )`,
+			player.Name, player.ServerID, player.Username, player.RaceID, player.JobID, player.Exp, player.Po, player.Level, player.GuildID, player.InventorySize, player.LocationId)
 		if insertErr != nil {
 			slog.Error("Error during insert from database", insertErr)
 			return
 		}
-		var user []*_struct.Player
-		selectErr := pgxscan.Select(ctx, db, &user, `SELECT id from players where name = $1 LIMIT 1`, player.Name)
+
+		var user *entities.Player
+		selectErr := pgxscan.Get(ctx, db, &user, `SELECT id from players where name = $1 LIMIT 1`, player.Name)
 		if selectErr != nil {
 			slog.Error("Error during select from database", selectErr)
 			return
 		}
 
-		utils.AddAction(user[0].ID, "create character", db, time.Now())
+		// TODO: Get basic stats of Race or Job
+
+		var job entities.Job
+		jobSelectErr := pgxscan.Get(ctx, db, &job, `SELECT * from jobs where id = $1`, player.JobID)
+		if jobSelectErr != nil {
+			slog.Error("Error during select from database", jobSelectErr)
+			return
+		}
+
+		var stats entities.Stats
+		_, insertErr = db.Exec(ctx, `INSERT into stats (user_id, hp,  strength, constitution, mana, stamina, dexterity, intelligence, wisdom, charisma) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			user.ID, stats.HP, stats.Strength, stats.Constitution, stats.Mana, stats.Stamina, stats.Dexterity, stats.Intelligence, stats.Wisdom, stats.Charisma)
+
+		rpg.AddAction(ctx, user.ID, "create character", db, time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
 		var choices []*discordgo.ApplicationCommandOptionChoice
 		switch {
 		case data.Options[1].Focused:
-			var races []*_struct.Race
+			var races []*entities.Race
 			selectErr := pgxscan.Select(ctx, db, &races, `SELECT * FROM races`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)
@@ -84,7 +98,7 @@ func Setup(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Poo
 				choices = append(choices, &choice)
 			}
 		case data.Options[2].Focused:
-			var jobs []*_struct.Job
+			var jobs []*entities.Job
 			selectErr := pgxscan.Select(ctx, db, &jobs, `SELECT * FROM jobs`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)

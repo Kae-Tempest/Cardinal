@@ -1,8 +1,8 @@
 package commands
 
 import (
-	_struct "Raphael/core/struct"
-	"Raphael/core/utils"
+	"Cardinal/core/entities"
+	"Cardinal/core/rpg"
 	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -13,19 +13,18 @@ import (
 	"time"
 )
 
-func Move(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
-	ctx := context.Background()
+func Move(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
 
-		var player _struct.Player
+		var player entities.Player
 		selectErr := pgxscan.Get(ctx, db, &player, `SELECT * from players where name = $1`, i.Interaction.Member.User.GlobalName)
 		if selectErr != nil {
 			slog.Error("Error during select from database", selectErr)
 			return
 		}
-		utils.CheckLastActionFinish(player, db)
+		rpg.CheckLastActionFinish(ctx, player, db)
 
 		locationID, _ := strconv.Atoi(data.Options[0].StringValue())
 		var locationName string
@@ -49,14 +48,14 @@ func Move(s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool
 			return
 		}
 		// insert player action
-		utils.AddAction(player.ID, "move to "+locationName, db, time.Now())
+		rpg.AddAction(ctx, player.ID, "move to "+locationName, db, time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
 		var choices []*discordgo.ApplicationCommandOptionChoice
 		switch {
 		case data.Options[0].Focused:
-			var locations []_struct.Locations
+			var locations []entities.Locations
 			selectErr := pgxscan.Select(ctx, db, &locations, `SELECT name, id FROM locations`)
 			if selectErr != nil {
 				slog.Error("Error during select from database", selectErr)
