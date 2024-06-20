@@ -3,7 +3,6 @@ package rpg
 import (
 	"Cardinal/core/entities"
 	"context"
-	"fmt"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
@@ -57,16 +56,13 @@ func upsertResource(ctx context.Context, player entities.Player, db *pgxpool.Poo
 	}
 	for _, resourceType := range resourceTypes {
 		if strings.Contains(action.Action, resourceType.Name) {
-			fmt.Println(resourceType.Name, "Name")
 			var resource entities.Resources
 			selectErr := pgxscan.Get(ctx, db, &resource, `SELECT id, name, quantities_per_min FROM resources where resources_type_id = $1`, resourceType.ID)
 			if selectErr != nil {
 				slog.Error("Error during selecting in database", selectErr)
 				return
 			}
-			fmt.Println(duration)
 			passedTime := math.Round(duration.Minutes() / 5)
-			fmt.Println(passedTime)
 			gatheredResources := int(passedTime) * resource.QuantitiesPerMin
 			_, upsertError := db.Exec(ctx, `INSERT INTO ressourceinventory (user_id, item_id, quantity) values ($1,$2,$3) on CONFLICT(item_id)
 					DO UPDATE SET quantity = excluded.quantity + ressourceinventory.quantity where ressourceinventory.user_id = excluded.user_id;`, player.ID, resource.ID, gatheredResources)

@@ -51,7 +51,7 @@ type skill struct {
 	Name string `json:"name"`
 }
 
-func HuntFight(s *discordgo.Session, player entities.Player, creature entities.Creatures, order []entities.FightOrder, threadChannel *discordgo.Channel, db *pgxpool.Pool, i *discordgo.InteractionCreate) {
+func HuntFight(s *discordgo.Session, player entities.Player, creature entities.Creatures, order []entities.FightOrder, threadChannel *discordgo.Channel, db *pgxpool.Pool) {
 	ctx := context.Background()
 	var playerSkill *skill
 	var creatureSkill *skill
@@ -66,8 +66,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 	}
 
 	if order[0].Name == "Player" {
-		fmt.Println("player first")
-		playerSkill, creatureSkill = playerTurn(player, threadChannel, db, s, i), creatureTurn(creature, db)
+		playerSkill, creatureSkill = playerTurn(player, threadChannel, db, s), creatureTurn(creature, db)
 		if creatureSkill == nil || playerSkill == nil {
 			slog.Error("Error during choosing Skill")
 			return
@@ -79,7 +78,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 			slog.Error("Error during getting Skill in database", getSkillErr)
 		}
 	} else {
-		creatureSkill, playerSkill = creatureTurn(creature, db), playerTurn(player, threadChannel, db, s, i)
+		creatureSkill, playerSkill = creatureTurn(creature, db), playerTurn(player, threadChannel, db, s)
 		if creatureSkill == nil || playerSkill == nil {
 			slog.Error("Error during choosing Skill")
 			return
@@ -259,7 +258,7 @@ func creatureTurn(creature entities.Creatures, db *pgxpool.Pool) *skill {
 	return nil
 }
 
-func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session, i *discordgo.InteractionCreate) *skill {
+func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session) *skill {
 	var basicPlayerSkill []*skill
 
 	basicPlayerSkill = append(basicPlayerSkill, &skill{
