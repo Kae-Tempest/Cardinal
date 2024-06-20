@@ -4,6 +4,7 @@ import (
 	"Cardinal/core/entities"
 	"Cardinal/core/rpg"
 	"context"
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -74,14 +75,19 @@ func Hunt(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCre
 
 	threadChannel := rpg.CreateHuntFightThead(s, i, player.Username, creature.Name)
 	// Boucle while
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Go to.. <#%s>", threadChannel.ID),
+		},
+	})
+
+	if err != nil {
+		slog.Error("Error during sending Interaction Respond", err)
+		return
+	}
 	rpg.HuntFight(s, player, creature, order, threadChannel, db)
 
 	// envoie du choix de skill
 
-	_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Pong! 🏓",
-		},
-	})
 }
