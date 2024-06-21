@@ -113,7 +113,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				}
 				switch creatureChosenSkill.Type {
 				case "attack":
-					damage = creatureChosenSkill.Intelligence + creature.Intelligence
+					damage = creatureChosenSkill.Strength + creature.Strength
 					playerStats.HP = playerStats.HP - damage
 					break
 				case "magic":
@@ -219,10 +219,16 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				switch creatureChosenSkill.Type {
 				case "attack":
 					damage = (creatureChosenSkill.Strength + creature.Strength) * (5 / 100)
+					if damage < 0 {
+						damage = 0
+					}
 					playerStats.HP = playerStats.HP - damage
 					break
 				case "magic":
 					damage = (creatureChosenSkill.Intelligence + creature.Intelligence) * (5 / 100)
+					if damage < 0 {
+						damage = 0
+					}
 					playerStats.HP = playerStats.HP - damage
 					break
 				}
