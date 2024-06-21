@@ -8,11 +8,11 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 func CreateHuntFightThead(s *discordgo.Session, i *discordgo.InteractionCreate, playerName string, creatureName string) *discordgo.Channel {
@@ -66,12 +66,14 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 		return
 	}
 	for playerStats.HP > 0 || creature.HP > 0 {
+		fmt.Println(playerStats.HP, creature.HP)
 		if order[0].Name == "Player" {
 			playerSkill, creatureSkill = playerTurn(player, threadChannel, db, s), creatureTurn(creature, db)
 			if creatureSkill == nil || playerSkill == nil {
 				slog.Error("Error during choosing Skill")
 				return
 			}
+			fmt.Println(playerSkill, creatureSkill)
 			getSkillErr := pgxscan.Get(ctx, db, &playerChosenSkill, `SELECT * from skills where id = $1`, playerSkill.ID)
 			getSkillErr = pgxscan.Get(ctx, db, &creatureChosenSkill, `SELECT * from skills where id = $1`, creatureSkill.ID)
 
@@ -98,6 +100,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				switch playerChosenSkill.Type {
 				case "attack":
 					damage = playerChosenSkill.Strength + playerStats.Strength
+					fmt.Println(damage)
 					creature.HP = creature.HP - damage
 					break
 				case "magic":
@@ -113,7 +116,8 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				}
 				switch creatureChosenSkill.Type {
 				case "attack":
-					damage = creatureChosenSkill.Intelligence + creature.Intelligence
+					damage = creatureChosenSkill.Strength + creature.Strength
+					fmt.Println(damage)
 					playerStats.HP = playerStats.HP - damage
 					break
 				case "magic":
@@ -143,6 +147,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				if damage < 0 {
 					damage = 0
 				}
+				fmt.Println(damage)
 				creature.HP = creature.HP - damage
 				break
 			case "magic":
@@ -163,14 +168,14 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				var damage int
 				switch playerChosenSkill.Type {
 				case "attack":
-					damage = (playerChosenSkill.Strength + playerStats.Strength) * (5 / 100)
+					damage = int(math.Round(float64(playerChosenSkill.Strength+playerStats.Strength) * 0.05))
 					if damage < 0 {
 						damage = 0
 					}
 					creature.HP = creature.HP - damage
 					break
 				case "magic":
-					damage = (playerChosenSkill.Intelligence + playerStats.Intelligence) * (5 / 100)
+					damage = int(math.Round(float64(playerChosenSkill.Intelligence+playerStats.Intelligence) * 0.05))
 					if damage < 0 {
 						damage = 0
 					}
@@ -197,6 +202,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				if damage < 0 {
 					damage = 0
 				}
+				fmt.Println(damage)
 				playerStats.HP = playerStats.HP - damage
 				break
 			case "magic":
@@ -219,10 +225,18 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				switch creatureChosenSkill.Type {
 				case "attack":
 					damage = (creatureChosenSkill.Strength + creature.Strength) * (5 / 100)
+					fmt.Println(damage)
+					if damage < 0 {
+						damage = 0
+					}
+					fmt.Println(damage)
 					playerStats.HP = playerStats.HP - damage
 					break
 				case "magic":
 					damage = (creatureChosenSkill.Intelligence + creature.Intelligence) * (5 / 100)
+					if damage < 0 {
+						damage = 0
+					}
 					playerStats.HP = playerStats.HP - damage
 					break
 				}
@@ -238,46 +252,20 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				}
 			}
 			creature.Mana -= creatureChosenSkill.Mana
-		} else if playerSkill.Type == "attack" && creatureSkill.Type == "dodge" {
-			var damage int
-			if playerStats.Dexterity > creature.Dexterity {
-				switch creatureChosenSkill.Type {
-				case "attack":
-					damage = (playerChosenSkill.Strength + playerStats.Strength) * (5 / 100)
-					if damage < 0 {
-						damage = 0
-					}
-					creature.HP = creature.HP - damage
-					break
-				case "magic":
-					damage = (playerChosenSkill.Intelligence + playerStats.Intelligence) * (5 / 100)
-					if damage < 0 {
-						damage = 0
-					}
-					creature.HP = creature.HP - damage
-					break
-				}
-			} else {
-				_, err := s.ChannelMessageSend(threadChannel.ID, fmt.Sprintf("%s have dodge you're attack...", creature.Name))
-				if err != nil {
-					slog.Error("Error during sending message", err)
-					return
-				}
-			}
-			playerStats.Mana -= playerChosenSkill.Mana
-		} else {
-			_, err := s.ChannelMessageSend(threadChannel.ID, "Nothing append this turn...")
-			if err != nil {
-				slog.Error("Error during sending message", err)
-				return
-			}
 		}
+		_, sendErr := s.ChannelMessageSend(threadChannel.ID, fmt.Sprintf("End of turn %d", i))
+		if sendErr != nil {
+			slog.Error("Error during sending message", sendErr)
+		}
+
+		if playerStats.HP <= 0 || creature.HP <= 0 {
+			fmt.Println("end")
+			break
+		}
+
+		i++
 	}
-	_, sendErr := s.ChannelMessageSend(threadChannel.ID, fmt.Sprintf("End of turn %d", i))
-	if sendErr != nil {
-		slog.Error("Error during sending message", sendErr)
-	}
-	i++
+
 	// while end
 }
 
@@ -450,7 +438,7 @@ func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pg
 		slog.Error("Error during sending the message", err)
 	}
 	// reception du choix du joueur
-	result, buttonInteractionErr := waitForButtonInteraction(s, message.ID, threadChannel.ID, 5*time.Minute)
+	result, buttonInteractionErr := waitForButtonInteraction(s, message.ID, threadChannel.ID)
 	if buttonInteractionErr != nil {
 		slog.Error("Error durring wait interraction", buttonInteractionErr)
 	}
@@ -469,7 +457,7 @@ func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pg
 }
 
 // waitForButtonInteraction waits for a button interaction and returns the CustomID of the clicked button.
-func waitForButtonInteraction(s *discordgo.Session, messageID, channelID string, timeout time.Duration) (string, error) {
+func waitForButtonInteraction(s *discordgo.Session, messageID, channelID string) (string, error) {
 	interactionChannel := make(chan *discordgo.InteractionCreate)
 	defer close(interactionChannel)
 
@@ -494,25 +482,23 @@ func waitForButtonInteraction(s *discordgo.Session, messageID, channelID string,
 		defer wg.Done()
 		select {
 		case result = <-interactionChannel:
-		case <-time.After(timeout):
-			err = fmt.Errorf("timeout waiting for interaction")
 		}
 	}()
 
 	// Wait for the interaction or timeout
 	wg.Wait()
 
-	if err != nil {
-		return "", err
-	}
-
-	_ = s.InteractionRespond(result.Interaction, &discordgo.InteractionResponse{
+	err = s.InteractionRespond(result.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
-			Content:    "",
+			Content:    "Waiting...",
 			Components: []discordgo.MessageComponent{},
 		},
 	})
+
+	if err != nil {
+		return "", err
+	}
 
 	return result.MessageComponentData().CustomID, nil
 }
