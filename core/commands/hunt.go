@@ -10,28 +10,24 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
 	"math/rand"
+	"time"
 )
 
 func Hunt(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
 	/*
-	 * Boucle While begin
-	 * envoie de la demande de choix du skill au joueur -> Attaque de base + 3 skill définis pars le joueur
-	 * en parralle choix automatique de l'attaque de la creature
-	 * execution du tour en decontant les degats sur le joueur et la creature
-	 * Si mort d'une des deux partie = Boucle While end
 	 * Mort joueur : perte de x PO + retour en ville
 	 * Mort Creature : Loot des Reward : { Po: X , Exp: X, items: [1,2,3] }
 	 */
-
+	start := time.Now()
 	// Get player
 	var player entities.Player
-	selectPlayerErr := pgxscan.Get(ctx, db, &player, `SELECT * FROM players where name = $1 LIMIT 1`, i.Interaction.Member.User.GlobalName)
+	selectPlayerErr := pgxscan.Get(ctx, db, &player, `SELECT id, username, location_id FROM players where name = $1 LIMIT 1`, i.Interaction.Member.User.GlobalName)
 	if selectPlayerErr != nil {
 		slog.Error("Error during select player into database", selectPlayerErr)
 		return
 	}
 	var playerStats entities.Stats
-	selectPlayerStatErr := pgxscan.Get(ctx, db, &playerStats, `SELECT * FROM stats where user_id = $1 LIMIT 1`, player.ID)
+	selectPlayerStatErr := pgxscan.Get(ctx, db, &playerStats, `SELECT dexterity FROM stats where user_id = $1 LIMIT 1`, player.ID)
 	if selectPlayerStatErr != nil {
 		slog.Error("Error during select player stats into database", selectPlayerErr)
 		return
@@ -87,7 +83,7 @@ func Hunt(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCre
 		return
 	}
 	rpg.HuntFight(s, player, creature, order, threadChannel, db)
-
+	rpg.AddAction(ctx, player.ID, fmt.Sprintf("Hunt: %s", creature.Name), db, start, time.Now())
 	// envoie du choix de skill
 
 }

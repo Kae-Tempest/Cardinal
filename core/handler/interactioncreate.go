@@ -6,6 +6,7 @@ import (
 	"Cardinal/core/tools"
 	"context"
 	"github.com/bwmarrin/discordgo"
+	"time"
 )
 
 func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -14,24 +15,27 @@ func InteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	ctx := context.Background()
 	db := Cardinal.DatabaseConnect()
-	switch i.Type {
-	case discordgo.InteractionMessageComponent:
+	if i.Type == discordgo.InteractionMessageComponent {
 		data := i.MessageComponentData()
 		switch data.CustomID {
 		case "attack":
+			time.Sleep(1 * time.Second)
 			tools.ClearInteractionMessage(s, i)
 			break
 		case "block":
+			time.Sleep(1 * time.Second)
 			tools.ClearInteractionMessage(s, i)
 			break
 		case "dodge":
+			time.Sleep(1 * time.Second)
 			tools.ClearInteractionMessage(s, i)
 			break
 		case "skillselectbtn":
+			time.Sleep(1 * time.Second)
 			tools.ClearInteractionMessage(s, i)
 			break
 		}
-	case discordgo.InteractionApplicationCommand:
+	} else {
 		data := i.ApplicationCommandData()
 		switch data.Name {
 		case "ping":

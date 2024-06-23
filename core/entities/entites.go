@@ -244,3 +244,10 @@ type FightOrder struct {
 	Name string
 	ID   int
 }
+
+type HuntAction struct {
+	PlayerID  int
+	BtnID     string
+	MessageID string
+	ChannelID string
+}

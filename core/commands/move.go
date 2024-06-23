@@ -48,7 +48,7 @@ func Move(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCre
 			return
 		}
 		// insert player action
-		rpg.AddAction(ctx, player.ID, "move to "+locationName, db, time.Now())
+		rpg.AddAction(ctx, player.ID, "move to "+locationName, db, time.Now(), time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()

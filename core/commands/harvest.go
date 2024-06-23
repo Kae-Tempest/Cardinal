@@ -36,7 +36,7 @@ func Harvest(ctx context.Context, s *discordgo.Session, i *discordgo.Interaction
 			return
 		}
 		endAt := time.Now().Add(time.Second * duration)
-		rpg.AddAction(ctx, player.ID, "harvest"+resource.Name+"| duration:"+data.Options[1].StringValue(), db, endAt)
+		rpg.AddAction(ctx, player.ID, "harvest"+resource.Name+"| duration:"+data.Options[1].StringValue(), db, time.Now(), endAt)
 		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{

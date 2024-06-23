@@ -15,7 +15,7 @@ import (
 )
 
 func Setup(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate, db *pgxpool.Pool) {
-
+	fmt.Println(i.Type)
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
@@ -63,8 +63,6 @@ func Setup(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCr
 			return
 		}
 
-		// TODO: Get basic stats of Race or Job
-
 		var job entities.Job
 		jobSelectErr := pgxscan.Get(ctx, db, &job, `SELECT * from jobs where id = $1`, player.JobID)
 		if jobSelectErr != nil {
@@ -76,7 +74,7 @@ func Setup(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCr
 		_, insertErr = db.Exec(ctx, `INSERT into stats (user_id, hp,  strength, constitution, mana, stamina, dexterity, intelligence, wisdom, charisma) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			user.ID, stats.HP, stats.Strength, stats.Constitution, stats.Mana, stats.Stamina, stats.Dexterity, stats.Intelligence, stats.Wisdom, stats.Charisma)
 
-		rpg.AddAction(ctx, user.ID, "create character", db, time.Now())
+		rpg.AddAction(ctx, user.ID, "create character", db, time.Now(), time.Now())
 
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()

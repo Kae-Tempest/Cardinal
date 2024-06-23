@@ -38,9 +38,9 @@ func CheckLastActionFinish(ctx context.Context, player entities.Player, db *pgxp
 	}
 }
 
-func AddAction(ctx context.Context, id int, actionName string, db *pgxpool.Pool, endAt time.Time) {
+func AddAction(ctx context.Context, playerID int, actionName string, db *pgxpool.Pool, startAt time.Time, endAt time.Time) {
 
-	_, insertErr := db.Exec(ctx, `INSERT into players_actions values ($1, $2, $3, $4)`, id, actionName, time.Now().Format("02_01_2006 15:04:05 -07:00"), endAt.Format("02_01_2006 15:04:05 -07:00"))
+	_, insertErr := db.Exec(ctx, `INSERT into players_actions (user_id, action, created_at, end_at) values ($1, $2, $3, $4)`, playerID, actionName, startAt.Format("02_01_2006 15:04:05 -07:00"), endAt.Format("02_01_2006 15:04:05 -07:00"))
 	if insertErr != nil {
 		slog.Error("Error during insert action in database", insertErr)
 		return

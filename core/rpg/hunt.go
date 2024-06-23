@@ -66,14 +66,12 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 		return
 	}
 	for playerStats.HP > 0 || creature.HP > 0 {
-		fmt.Println(playerStats.HP, creature.HP)
 		if order[0].Name == "Player" {
-			playerSkill, creatureSkill = playerTurn(player, threadChannel, db, s), creatureTurn(creature, db)
+			playerSkill, creatureSkill = playerTurn(ctx, player, threadChannel, db, s), creatureTurn(creature, db)
 			if creatureSkill == nil || playerSkill == nil {
 				slog.Error("Error during choosing Skill")
 				return
 			}
-			fmt.Println(playerSkill, creatureSkill)
 			getSkillErr := pgxscan.Get(ctx, db, &playerChosenSkill, `SELECT * from skills where id = $1`, playerSkill.ID)
 			getSkillErr = pgxscan.Get(ctx, db, &creatureChosenSkill, `SELECT * from skills where id = $1`, creatureSkill.ID)
 
@@ -81,7 +79,7 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				slog.Error("Error during getting Skill in database", getSkillErr)
 			}
 		} else {
-			creatureSkill, playerSkill = creatureTurn(creature, db), playerTurn(player, threadChannel, db, s)
+			creatureSkill, playerSkill = creatureTurn(creature, db), playerTurn(ctx, player, threadChannel, db, s)
 			if creatureSkill == nil || playerSkill == nil {
 				slog.Error("Error during choosing Skill")
 				return
@@ -96,38 +94,33 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 
 		if playerSkill.Type == creatureSkill.Type {
 			if playerSkill.Type == "attack" {
-				var damage int
+				var playerDamage int
+				var creatureDamage int
 				switch playerChosenSkill.Type {
 				case "attack":
-					damage = playerChosenSkill.Strength + playerStats.Strength
-					fmt.Println(damage)
-					creature.HP = creature.HP - damage
+					playerDamage = playerChosenSkill.Strength + playerStats.Strength
+					creature.HP = creature.HP - playerDamage
 					break
 				case "magic":
-					damage = playerChosenSkill.Intelligence + playerStats.Intelligence
-					creature.HP = creature.HP - damage
+					playerDamage = playerChosenSkill.Intelligence + playerStats.Intelligence
+					creature.HP = creature.HP - playerDamage
 					break
 				}
 				playerStats.Mana -= playerChosenSkill.Mana
 
-				_, sendErr := s.ChannelMessageSend(threadChannel.ID, fmt.Sprintf("You did %d points of damage to %s", damage, creature.Name))
-				if sendErr != nil {
-					slog.Error("error during send message", sendErr)
-				}
 				switch creatureChosenSkill.Type {
 				case "attack":
-					damage = creatureChosenSkill.Strength + creature.Strength
-					fmt.Println(damage)
-					playerStats.HP = playerStats.HP - damage
+					creatureDamage = creatureChosenSkill.Strength + creature.Strength
+					playerStats.HP = playerStats.HP - creatureDamage
 					break
 				case "magic":
-					damage = creatureChosenSkill.Intelligence + creature.Intelligence
-					playerStats.HP = playerStats.HP - damage
+					creatureDamage = creatureChosenSkill.Intelligence + creature.Intelligence
+					playerStats.HP = playerStats.HP - creatureDamage
 					break
 				}
 				creature.Mana -= creatureChosenSkill.Mana
 				// send msg for HP update
-				_, sendErr = s.ChannelMessageSend(threadChannel.ID, fmt.Sprintf("%s did %d points of damage to you", creature.Name, damage))
+				_, sendErr := s.ChannelMessageSend(threadChannel.ID, fmt.Sprintf("You did %d points of damage to %s \n %s did %d points of damage to you ", playerDamage, creature.Name, creature.Name, creatureDamage))
 				if sendErr != nil {
 					slog.Error("error during send message", sendErr)
 				}
@@ -147,7 +140,6 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				if damage < 0 {
 					damage = 0
 				}
-				fmt.Println(damage)
 				creature.HP = creature.HP - damage
 				break
 			case "magic":
@@ -202,7 +194,6 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				if damage < 0 {
 					damage = 0
 				}
-				fmt.Println(damage)
 				playerStats.HP = playerStats.HP - damage
 				break
 			case "magic":
@@ -225,11 +216,9 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 				switch creatureChosenSkill.Type {
 				case "attack":
 					damage = (creatureChosenSkill.Strength + creature.Strength) * (5 / 100)
-					fmt.Println(damage)
 					if damage < 0 {
 						damage = 0
 					}
-					fmt.Println(damage)
 					playerStats.HP = playerStats.HP - damage
 					break
 				case "magic":
@@ -260,9 +249,16 @@ func HuntFight(s *discordgo.Session, player entities.Player, creature entities.C
 
 		if playerStats.HP <= 0 || creature.HP <= 0 {
 			fmt.Println("end")
+
+			// send Reward to Player if Player HP > 0
+
+			// close thread
+
 			break
 		}
-
+		if i%10 == 0 {
+			// send current HP of Player and Creature
+		}
 		i++
 	}
 
@@ -295,7 +291,7 @@ func creatureTurn(creature entities.Creatures, db *pgxpool.Pool) *skill {
 			switch {
 			case r <= 5 && skill.Type == "attack":
 				return skill
-			case r > 6 && r < 8 && skill.Type == "block":
+			case r >= 6 && r < 8 && skill.Type == "block":
 				return skill
 			case r >= 8 && skill.Type == "dodge":
 				return skill
@@ -336,7 +332,7 @@ func creatureTurn(creature entities.Creatures, db *pgxpool.Pool) *skill {
 	return nil
 }
 
-func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session) *skill {
+func playerTurn(ctx context.Context, player entities.Player, threadChannel *discordgo.Channel, db *pgxpool.Pool, s *discordgo.Session) *skill {
 	var basicPlayerSkill []*skill
 
 	basicPlayerSkill = append(basicPlayerSkill, &skill{
@@ -357,7 +353,7 @@ func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pg
 
 	// Get 3 skill + atk de base + dodge + block
 	var playerSkills []entities.Skill
-	selectErr := pgxscan.Select(context.Background(), db, &playerSkills, `select id, name from skills s join user_skill us on s.id = us.skill_id join user_job_skill ujs on s.id = ujs.job_skill_id where us.user_id = $1 and ujs.user_id = $1`, player.ID)
+	selectErr := pgxscan.Select(ctx, db, &playerSkills, `select id, name from skills s join user_skill us on s.id = us.skill_id join user_job_skill ujs on s.id = ujs.job_skill_id where us.user_id = $1 and ujs.user_id = $1`, player.ID)
 	if selectErr != nil {
 		slog.Error("Error during selection player Skills into databases", selectErr)
 	}
@@ -437,68 +433,54 @@ func playerTurn(player entities.Player, threadChannel *discordgo.Channel, db *pg
 	if err != nil {
 		slog.Error("Error during sending the message", err)
 	}
-	// reception du choix du joueur
-	result, buttonInteractionErr := waitForButtonInteraction(s, message.ID, threadChannel.ID)
-	if buttonInteractionErr != nil {
-		slog.Error("Error durring wait interraction", buttonInteractionErr)
-	}
-	// renvoie du skill choisie
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	switch result {
+	waitForButtonInteraction(ctx, db, s, message.ID, threadChannel.ID, player.ID, &wg)
+	wg.Wait()
+
+	var result entities.HuntAction
+	err = pgxscan.Get(ctx, db, &result, `SELECT * FROM hunt_action where message_id = $1 AND player_id = $2 AND channel_id = $3 order by player_id DESC LIMIT 1`, message.ID, player.ID, threadChannel.ID)
+
+	if err != nil {
+		slog.Error("Error during getting hunt_action into database", err)
+		return nil
+	}
+
+	// renvoie du skill choisie
+	switch result.BtnID {
 	case "attack":
 		return basicPlayerSkill[0]
 	case "block":
 		return basicPlayerSkill[1]
 	case "dodge":
 		return basicPlayerSkill[2]
-
 	}
 	return nil
 }
 
 // waitForButtonInteraction waits for a button interaction and returns the CustomID of the clicked button.
-func waitForButtonInteraction(s *discordgo.Session, messageID, channelID string) (string, error) {
-	interactionChannel := make(chan *discordgo.InteractionCreate)
-	defer close(interactionChannel)
+func waitForButtonInteraction(ctx context.Context, db *pgxpool.Pool, s *discordgo.Session, messageID string, channelID string, playerID int, wg *sync.WaitGroup) {
+	s.AddHandler(func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+		if interaction.Message.ID == messageID && interaction.ChannelID == channelID && interaction.Type == discordgo.InteractionMessageComponent {
+			_, err := db.Exec(ctx, `insert into hunt_action (player_id, btn_id, message_id, channel_id) values ($1, $2, $3, $4)`, playerID, interaction.MessageComponentData().CustomID, messageID, channelID)
+			if err != nil {
+				slog.Error("", err)
+			}
 
-	// Temporary handler for this interaction
-	tempHandler := func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
-		if interaction.Message.ID == messageID && interaction.ChannelID == channelID {
-			interactionChannel <- interaction
+			err = s.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseUpdateMessage,
+				Data: &discordgo.InteractionResponseData{
+					Content:    "Waiting...",
+					Components: []discordgo.MessageComponent{},
+				},
+			})
+
+			if err != nil {
+				slog.Error("Error during editing message", err)
+			}
+
+			wg.Done()
 		}
-	}
-
-	// Add the temporary handler
-	s.AddHandler(tempHandler)
-
-	// Create a wait group to handle timeout
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	var result *discordgo.InteractionCreate
-	var err error
-
-	go func() {
-		defer wg.Done()
-		select {
-		case result = <-interactionChannel:
-		}
-	}()
-
-	// Wait for the interaction or timeout
-	wg.Wait()
-
-	err = s.InteractionRespond(result.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseUpdateMessage,
-		Data: &discordgo.InteractionResponseData{
-			Content:    "Waiting...",
-			Components: []discordgo.MessageComponent{},
-		},
 	})
-
-	if err != nil {
-		return "", err
-	}
-
-	return result.MessageComponentData().CustomID, nil
 }
